@@ -44,7 +44,7 @@ exports.compile = function(opts) {
   mkdirSync('build/fake-module/main');
 
   // For compilation with babel we start with the main-babel entry point,
-  // but then rename to the subscriptions.js which we've been using all along.
+  // but then rename to the activities.js which we've been using all along.
   return Promise.all([
     compileJs('./main/', 'main', './dist',
       Object.assign({

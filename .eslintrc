@@ -23,7 +23,7 @@
     "afterEach": false,
     "before": false,
     "after": false,
-    "SUBSCRIPTIONS": false,
+    "ACTIVITIES": false,
     "assert": false,
     "sinon": true,
     "sandbox": true,

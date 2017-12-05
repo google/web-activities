@@ -156,18 +156,3 @@ requirement: {
   error_message: 'Symbol is not allowed'
   value: 'Symbol'
 }
-
-requirement: {
-  type: BANNED_NAME
-  error_message: 'Use parseJson instead.'
-  value: 'JSON.parse'
-  whitelist: 'src/utils/json.js' # Where parseJson itself is implemented.
-}
-
-requirement: {
-  type: RESTRICTED_NAME_CALL
-  error_message: 'JSON.stringify must be called with a JsonObject'
-  # Unfortunately the Array is untyped, because the compiler doesn't check
-  # for the template type.
-  value: 'JSON.stringify:function((?JsonObject|string|number|boolean|undefined|Array),!Function=)'
-}
