@@ -34,6 +34,8 @@ const source = require('vinyl-source-stream');
 const touch = require('touch');
 const watchify = require('watchify');
 
+const json = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const version = json.version;
 
 /**
  * @return {!Promise}
@@ -42,11 +44,11 @@ function rollupActivities() {
   mkdirSync('build');
   mkdirSync('dist');
   return exec(
-    './node_modules/rollup/bin/rollup' +
-    ' index.js' +
-    ' --f es' +//cjs
-    ' --no-treeshake --no-strict' +
-    ' --o build/activities-rollup.js'
+      './node_modules/rollup/bin/rollup' +
+      ' index.js' +
+      ' --f es' +
+      ' --no-treeshake' +
+      ' --o build/activities-rollup.js'
   ).then(() => {
     let js = fs.readFileSync('build/activities-rollup.js', 'utf8');
     // 1. Rearrange one license on top.
@@ -68,16 +70,14 @@ function rollupActivities() {
       }
       js = js.substring(0, start) + js.substring(end);
     }
-    js = license + '\n' + js;
+    js = `${license}\n /** Version: ${version} */\n'use strict';\n${js}`;
 
     // 2. Strip "Def"
     js = js.replace(/Def/g, '');
 
-    // 3. Strip exports.
-    js = js.replace(/export \{.*\}\;/, '');
     return js;
   }).then(js => {
-    fs.writeFileSync('./index-es6.js', js);
+    fs.writeFileSync('./activities.js', js);
   });
 }
 

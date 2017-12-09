@@ -15,9 +15,6 @@
  * limitations under the License.
  */
 
-/**
- * This file is used to publish to NPM (https://www.npmjs.com/package/web-activities).
- */
 import {Activities} from './src/activities';
 import {ActivityIframeHost} from './src/activity-iframe-host';
 import {ActivityIframePort} from './src/activity-iframe-port';

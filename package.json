@@ -1,9 +1,9 @@
 {
   "private": false,
   "name": "web-activities",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Web Activities",
-  "main": "./index-es6.js",
+  "main": "./activities.js",
   "engines": {
     "node": ">=6",
     "yarn": ">=1.0.2"
