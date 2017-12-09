@@ -23,3 +23,5 @@ these steps to publish latest version to NPM:
   of "web-activities" to NPM: `'npm publish'`.
 * Go to the URL https://www.npmjs.com/package/web-activities and confirm the
   current version is published.
+* To test, go to the URL https://npm.runkit.com/web-activities and hit `Run` and
+  confirm that expected APIs are listed.
