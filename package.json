@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "web-activities",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Web Activities",
   "main": "./activities.js",
   "engines": {
@@ -27,7 +27,7 @@
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
     "LICENSE",
-    "index-es6.js"
+    "activities.js"
   ],
   "dependencies": {
     "promise-pjs": "1.1.3"

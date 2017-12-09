@@ -8,9 +8,7 @@ Once changes are made to the core library and have been approved, follow
 these steps to publish latest version to NPM:
 
 * Bump the version number in package.json such as: version: "1.0.20" -> "1.0.21"
-* Run the `'gulp activities-to-es6'` task to generate an intermediate file at
-  `'build/activities-rollup.js'` and the NPM version of the file at
-  `'./activities.js'`.
+* Run the `'gulp dist'` task. This will generate the file `'./activities.js'`.
 * The `'./activities.js'` file is referred in the `'main'` attribute of
   `'package.json'`.
 

@@ -40,7 +40,7 @@ const version = json.version;
 /**
  * @return {!Promise}
  */
-function rollupActivities() {
+exports.rollupActivities = function() {
   mkdirSync('build');
   mkdirSync('dist');
   return exec(
@@ -79,7 +79,7 @@ function rollupActivities() {
   }).then(js => {
     fs.writeFileSync('./activities.js', js);
   });
-}
+};
 
 
 function mkdirSync(path) {
@@ -91,7 +91,3 @@ function mkdirSync(path) {
     }
   }
 }
-
-
-gulp.task('activities-to-es6', 'Rollup activities to a ES6 module',
-    rollupActivities);
