@@ -1,9 +1,9 @@
 {
-  "private": true,
-  "name": "Web Activities",
-  "version": "0.1.0",
+  "private": false,
+  "name": "web-activities",
+  "version": "0.1.9",
   "description": "Web Activities",
-  "main": "index.js",
+  "main": "./activities.js",
   "engines": {
     "node": ">=6",
     "yarn": ">=1.0.2"
@@ -22,6 +22,13 @@
     "build": "gulp build",
     "dist": "gulp dist"
   },
+  "files": [
+    "SUPPORT.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "LICENSE",
+    "activities.js"
+  ],
   "dependencies": {
     "promise-pjs": "1.1.3"
   },

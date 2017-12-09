@@ -15,38 +15,40 @@
  */
 'use strict';
 
-var $$ = require('gulp-load-plugins')();
-var BBPromise = require('bluebird');
-var argv = require('minimist')(process.argv.slice(2));
-var babel = require('babelify');
-var browserify = require('browserify');
-var buffer = require('vinyl-buffer');
-var compile = require('./compile').compile;
-var compileCheckTypes = require('./compile').checkTypes;
-var del = require('del');
-var exec = BBPromise.promisify(require('child_process').exec);
-var fs = require('fs-extra');
-var gulp = $$.help(require('gulp'));
-var lazypipe = require('lazypipe');
-var minimatch = require('minimatch');
-var minimist = require('minimist');
-var source = require('vinyl-source-stream');
-var touch = require('touch');
-var watchify = require('watchify');
+const $$ = require('gulp-load-plugins')();
+const BBPromise = require('bluebird');
+const argv = require('minimist')(process.argv.slice(2));
+const babel = require('babelify');
+const browserify = require('browserify');
+const buffer = require('vinyl-buffer');
+const compile = require('./compile').compile;
+const compileCheckTypes = require('./compile').checkTypes;
+const del = require('del');
+const exec = BBPromise.promisify(require('child_process').exec);
+const fs = require('fs-extra');
+const gulp = $$.help(require('gulp'));
+const lazypipe = require('lazypipe');
+const minimatch = require('minimatch');
+const minimist = require('minimist');
+const source = require('vinyl-source-stream');
+const touch = require('touch');
+const watchify = require('watchify');
 
+const json = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const version = json.version;
 
 /**
  * @return {!Promise}
  */
-function rollupActivities() {
+exports.rollupActivities = function() {
   mkdirSync('build');
   mkdirSync('dist');
   return exec(
-    './node_modules/rollup/bin/rollup' +
-    ' src/activities.js' +
-    ' --f es' +//cjs
-    ' --no-treeshake --no-strict' +
-    ' --o build/activities-rollup.js'
+      './node_modules/rollup/bin/rollup' +
+      ' index.js' +
+      ' --f es' +
+      ' --no-treeshake' +
+      ' --o build/activities-rollup.js'
   ).then(() => {
     let js = fs.readFileSync('build/activities-rollup.js', 'utf8');
     // 1. Rearrange one license on top.
@@ -68,30 +70,24 @@ function rollupActivities() {
       }
       js = js.substring(0, start) + js.substring(end);
     }
-    js = license + '\n' + js;
+    js = `${license}\n /** Version: ${version} */\n'use strict';\n${js}`;
 
     // 2. Strip "Def"
     js = js.replace(/Def/g, '');
 
-    // 3. Strip exports.
-    js = js.replace(/export \{.*\}\;/, '');
     return js;
   }).then(js => {
-    fs.writeFileSync('dist/activities-es6.js', js);
+    fs.writeFileSync('./activities.js', js);
   });
-}
+};
 
 
 function mkdirSync(path) {
   try {
     fs.mkdirSync(path);
-  } catch(e) {
+  } catch (e) {
     if (e.code != 'EEXIST') {
       throw e;
     }
   }
 }
-
-
-gulp.task('activities-to-es6', 'Rollup activities to a ES6 module',
-    rollupActivities);

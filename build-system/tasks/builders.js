@@ -15,21 +15,22 @@
  */
 'use strict';
 
-var $$ = require('gulp-load-plugins')();
-var babel = require('babelify');
-var browserify = require('browserify');
-var buffer = require('vinyl-buffer');
-var compile = require('./compile').compile;
-var compileCheckTypes = require('./compile').checkTypes;
-var del = require('del');
-var fs = require('fs-extra');
-var gulp = $$.help(require('gulp'));
-var lazypipe = require('lazypipe');
-var minimatch = require('minimatch');
-var minimist = require('minimist');
-var source = require('vinyl-source-stream');
-var touch = require('touch');
-var watchify = require('watchify');
+const $$ = require('gulp-load-plugins')();
+const babel = require('babelify');
+const browserify = require('browserify');
+const buffer = require('vinyl-buffer');
+const compile = require('./compile').compile;
+const compileCheckTypes = require('./compile').checkTypes;
+const del = require('del');
+const fs = require('fs-extra');
+const gulp = $$.help(require('gulp'));
+const lazypipe = require('lazypipe');
+const minimatch = require('minimatch');
+const minimist = require('minimist');
+const rollupActivities = require('./activities-to-es6').rollupActivities;
+const source = require('vinyl-source-stream');
+const touch = require('touch');
+const watchify = require('watchify');
 
 
 /**
@@ -74,7 +75,9 @@ function dist() {
   return clean().then(() => {
     return Promise.all([
       compile({minify: true, checkTypes: true}),
-    ]);
+    ]).then(() => {
+      return rollupActivities();
+    });
   });
 }
 
@@ -96,6 +99,6 @@ gulp.task('dist', 'Build production binaries', dist, {
   options: {
     pseudo_names: 'Compiles with readable names. ' +
         'Great for profiling and debugging production code.',
-  }
+  },
 });
 gulp.task('check-types', 'Check JS types', checkTypes);
