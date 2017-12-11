@@ -15,27 +15,13 @@
  */
 'use strict';
 
-const $$ = require('gulp-load-plugins')();
 const BBPromise = require('bluebird');
-const argv = require('minimist')(process.argv.slice(2));
-const babel = require('babelify');
-const browserify = require('browserify');
-const buffer = require('vinyl-buffer');
-const compile = require('./compile').compile;
-const compileCheckTypes = require('./compile').checkTypes;
-const del = require('del');
 const exec = BBPromise.promisify(require('child_process').exec);
 const fs = require('fs-extra');
-const gulp = $$.help(require('gulp'));
-const lazypipe = require('lazypipe');
-const minimatch = require('minimatch');
-const minimist = require('minimist');
-const source = require('vinyl-source-stream');
-const touch = require('touch');
-const watchify = require('watchify');
 
 const json = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const version = json.version;
+const main = json.main;
 
 /**
  * @return {!Promise}
@@ -77,17 +63,13 @@ exports.rollupActivities = function() {
 
     return js;
   }).then(js => {
-    fs.writeFileSync('./activities.js', js);
+    fs.writeFileSync(main, js);
   });
 };
 
 
 function mkdirSync(path) {
-  try {
+  if (!fs.existsSync(path)) {
     fs.mkdirSync(path);
-  } catch (e) {
-    if (e.code != 'EEXIST') {
-      throw e;
-    }
   }
 }
