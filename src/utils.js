@@ -17,24 +17,25 @@
 
 import {ActivityRequestDef} from './activity-types';
 
+/** @type {?HTMLAnchorElement} */
 let aResolver;
 
 
 /**
  * @param {string} urlString
- * @return {!URL}
+ * @return {!HTMLAnchorElement}
  */
 function parseUrl(urlString) {
   if (!aResolver) {
-    aResolver = document.createElement('a');
+    aResolver = /** @type {!HTMLAnchorElement} */ (document.createElement('a'));
   }
   aResolver.href = urlString;
-  return /** @type {!URL} */ (aResolver);
+  return /** @type {!HTMLAnchorElement} */ (aResolver);
 }
 
 
 /**
- * @param {!Location|!URL} loc
+ * @param {!Location|!URL|!HTMLAnchorElement} loc
  * @return {string}
  */
 function getOrigin(loc) {
@@ -97,7 +98,8 @@ function parseQueryString(query) {
 
 
 /**
- * @param {string} queryString
+ * @param {string} queryString  A query string in the form of "a=b&c=d". Could
+ *   be optionally prefixed with "?" or "#".
  * @return {?string}
  */
 export function getQueryParam(queryString, param) {
@@ -106,7 +108,8 @@ export function getQueryParam(queryString, param) {
 
 
 /**
- * @param {string} queryString
+ * @param {string} queryString  A query string in the form of "a=b&c=d". Could
+ *   be optionally prefixed with "?" or "#".
  * @return {?string}
  */
 export function removeQueryParam(queryString, param) {
