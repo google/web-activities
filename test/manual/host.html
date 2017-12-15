@@ -53,9 +53,13 @@
       var origin = host.getTargetOrigin();
       var args = host.getArgs();
       if (args.publicationId != 'scenic' || origin != 'http://localhost:8000') {
+        console.log('Host arg failure:',
+            'wrong pubid or origin: ' + args.publicationId + '/' + origin);
         host.failed(new Error('wrong pubid or origin: ' + args.publicationId + '/' + origin));
         throw new Error('failed checks!');
       }
+      console.log('Accept: ', origin, host.isTargetOriginVerified(), args);
+      host.accept();
     }).then(function() {
       host.setSizeContainer(container);
       host.onResizeComplete(function(height, requestedHeight, overflow) {
@@ -72,6 +76,7 @@
       };
       host.ready();
     }).catch(function(reason) {
+      console.log('Host error: ', reason);
       if (host) {
         host.failed(reason);
       }

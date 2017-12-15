@@ -16,7 +16,7 @@
  */
 
 import {ActivityIframePort} from '../../src/activity-iframe-port';
-import {ActivityResultCode} from '../../src/activity-types';
+import {ActivityMode, ActivityResultCode} from '../../src/activity-types';
 
 
 describes.realWin('ActivityIframePort', {}, env => {
@@ -33,13 +33,16 @@ describes.realWin('ActivityIframePort', {}, env => {
     port = new ActivityIframePort(
         iframe,
         'https://example-sp.com/iframe',
-        'https://example-sp.com',
         {a: 1});
     messenger = port.messenger_;
   });
 
   afterEach(() => {
     messenger.disconnect();
+  });
+
+  it('should return mode', () => {
+    expect(port.getMode()).to.equal(ActivityMode.IFRAME);
   });
 
   it('should require that iframe is in DOM', () => {
@@ -63,6 +66,13 @@ describes.realWin('ActivityIframePort', {}, env => {
     port.disconnect();
     expect(port.connected_).to.be.false;
     expect(messenger.onCommand_).to.be.null;
+  });
+
+  it('should resolve target properties', () => {
+    port.connect();
+    expect(port.getTargetOrigin()).to.equal('https://example-sp.com');
+    expect(port.isTargetOriginVerified()).to.be.true;
+    expect(port.isSecureChannel()).to.be.true;
   });
 
   describe('commands', () => {
@@ -93,10 +103,13 @@ describes.realWin('ActivityIframePort', {}, env => {
       onCommand('result', {code: 'ok', data: 'success'});
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('close');
-      return port.awaitResult().then(result => {
+      return port.acceptResult().then(result => {
         expect(result.ok).to.be.true;
         expect(result.code).to.equal(ActivityResultCode.OK);
         expect(result.data).to.equal('success');
+        expect(result.origin).to.equal('https://example-sp.com');
+        expect(result.originVerified).to.be.true;
+        expect(result.secureChannel).to.be.true;
         expect(port.connected_).to.be.false;
       });
     });
@@ -106,10 +119,13 @@ describes.realWin('ActivityIframePort', {}, env => {
       onCommand('result', {code: 'canceled', data: null});
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('close');
-      return port.awaitResult().then(result => {
+      return port.acceptResult().then(result => {
         expect(result.ok).to.be.false;
         expect(result.code).to.equal(ActivityResultCode.CANCELED);
         expect(result.data).to.be.null;
+        expect(result.origin).to.equal('https://example-sp.com');
+        expect(result.originVerified).to.be.true;
+        expect(result.secureChannel).to.be.true;
         expect(port.connected_).to.be.false;
       });
     });
@@ -119,12 +135,15 @@ describes.realWin('ActivityIframePort', {}, env => {
       onCommand('result', {code: 'failed', data: 'broken'});
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('close');
-      return port.awaitResult().then(result => {
+      return port.acceptResult().then(result => {
         expect(result.ok).to.be.false;
         expect(result.code).to.equal(ActivityResultCode.FAILED);
         expect(result.error).to.be.instanceof(Error);
         expect(result.error.message).to.match(/broken/);
         expect(result.data).to.be.null;
+        expect(result.origin).to.equal('https://example-sp.com');
+        expect(result.originVerified).to.be.true;
+        expect(result.secureChannel).to.be.true;
         expect(port.connected_).to.be.false;
       });
     });

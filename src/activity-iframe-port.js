@@ -16,11 +16,13 @@
  */
 
 import {
+  ActivityMode,
   ActivityPortDef,
   ActivityResult,
   ActivityResultCode,
 } from './activity-types';
 import {Messenger} from './messenger';
+import {getOriginFromUrl} from './utils';
 
 
 /**
@@ -35,10 +37,9 @@ export class ActivityIframePort {
   /**
    * @param {!HTMLIFrameElement} iframe
    * @param {string} url
-   * @param {string} origin
    * @param {?Object=} opt_args
    */
-  constructor(iframe, url, origin, opt_args) {
+  constructor(iframe, url, opt_args) {
     /** @private @const {!HTMLIFrameElement} */
     this.iframe_ = iframe;
     /** @private @const {string} */
@@ -50,7 +51,7 @@ export class ActivityIframePort {
     this.win_ = /** @type {!Window} */ (this.iframe_.ownerDocument.defaultView);
 
     /** @private @const {string} */
-    this.targetOrigin_ = origin;
+    this.targetOrigin_ = getOriginFromUrl(url);
 
     /** @private {boolean} */
     this.connected_ = false;
@@ -74,7 +75,7 @@ export class ActivityIframePort {
     /** @private {?function(!ActivityResult)} */
     this.resultResolver_ = null;
 
-    /** @private {!Promise<!ActivityResult>} */
+    /** @private @const {!Promise<!ActivityResult>} */
     this.resultPromise_ = new Promise(resolve => {
       this.resultResolver_ = resolve;
     });
@@ -92,6 +93,11 @@ export class ActivityIframePort {
         this.targetOrigin_);
   }
 
+  /** @override */
+  getMode() {
+    return ActivityMode.IFRAME;
+  }
+
   /**
    * Waits until the activity port is connected to the host.
    * @return {!Promise}
@@ -105,18 +111,31 @@ export class ActivityIframePort {
     return this.connectedPromise_;
   }
 
-  /** @override */
+  /**
+   * Disconnect the activity binding and cleanup listeners.
+   */
   disconnect() {
     this.connected_ = false;
     this.messenger_.disconnect();
   }
 
-  /**
-   * Returns the promise that yields when the activity has been completed and
-   * either a result, a cancelation or a failure has been returned.
-   * @return {!Promise}
-   */
-  awaitResult() {
+  /** @override */
+  getTargetOrigin() {
+    return this.messenger_.getTargetOrigin();
+  }
+
+  /** @override */
+  isTargetOriginVerified() {
+    return true;
+  }
+
+  /** @override */
+  isSecureChannel() {
+    return true;
+  }
+
+  /** @override */
+  acceptResult() {
     return this.resultPromise_;
   }
 
@@ -174,7 +193,12 @@ export class ActivityIframePort {
             code == ActivityResultCode.FAILED ?
             new Error(payload['data'] || '') :
             payload['data'];
-        const result = new ActivityResult(code, data);
+        const result = new ActivityResult(
+            code,
+            data,
+            this.getTargetOrigin(),
+            this.isTargetOriginVerified(),
+            this.isSecureChannel());
         this.resultResolver_(result);
         this.resultResolver_ = null;
         this.messenger_.sendCommand('close');

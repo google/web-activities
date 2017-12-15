@@ -16,21 +16,35 @@
  */
 
 import {Activities} from './src/activities';
-import {ActivityIframeHost} from './src/activity-iframe-host';
-import {ActivityIframePort} from './src/activity-iframe-port';
 import {
   ActivityHostDef,
+  ActivityMode,
+  ActivityOpenOptionsDef,
   ActivityPortDef,
+  ActivityRequestDef,
   ActivityResult,
   ActivityResultCode,
 } from './src/activity-types';
+import {ActivityIframeHost} from './src/activity-iframe-host';
+import {ActivityIframePort} from './src/activity-iframe-port';
+import {
+  ActivityWindowPopupHost,
+  ActivityWindowRedirectHost,
+} from './src/activity-window-host';
+import {ActivityWindowPort} from './src/activity-window-port';
 
 module.exports = {
   Activities,
   ActivityHostDef,
   ActivityIframeHost,
   ActivityIframePort,
+  ActivityMode,
+  ActivityOpenOptionsDef,
   ActivityPortDef,
+  ActivityRequestDef,
   ActivityResult,
   ActivityResultCode,
+  ActivityWindowPopupHost,
+  ActivityWindowPort,
+  ActivityWindowRedirectHost,
 };
