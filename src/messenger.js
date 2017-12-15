@@ -78,15 +78,24 @@ export class Messenger {
    * @return {!Window}
    */
   getTarget() {
+    const target = this.getOptionalTarget_();
+    if (!target) {
+      throw new Error('not connected');
+    }
+    return target;
+  }
+
+  /**
+   * @return {?Window}
+   * @private
+   */
+  getOptionalTarget_() {
     if (this.onCommand_ && !this.target_) {
       if (typeof this.targetOrCallback_ == 'function') {
         this.target_ = this.targetOrCallback_();
       } else {
         this.target_ = /** @type {!Window} */ (this.targetOrCallback_);
       }
-    }
-    if (!this.target_) {
-      throw new Error('not connected');
     }
     return this.target_;
   }
@@ -136,6 +145,11 @@ export class Messenger {
     const payload = data['payload'] || null;
     if (this.targetOrigin_ == null && cmd == 'start') {
       this.targetOrigin_ = origin;
+    }
+    if (this.targetOrigin_ == null && event.source) {
+      if (this.getOptionalTarget_() == event.source) {
+        this.targetOrigin_ = origin;
+      }
     }
     // Notice that event.source may differ from the target because of
     // friendly-iframe intermediaries.

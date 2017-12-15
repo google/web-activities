@@ -14,6 +14,8 @@
 
 (window.ACTIVITIES = window.ACTIVITIES || []).push(function(activities) {
   activities.connectHost().then(function(host) {
+    host.accept();
+
     var container = document.getElementById('container');
     host.setSizeContainer(container);
 

@@ -16,6 +16,7 @@
  */
 
 import {ActivityIframeHost} from '../../src/activity-iframe-host';
+import {ActivityMode} from '../../src/activity-types';
 
 
 describes.realWin('ActivityIframeHost', {}, env => {
@@ -38,6 +39,10 @@ describes.realWin('ActivityIframeHost', {}, env => {
     messenger.disconnect();
   });
 
+  it('should return mode', () => {
+    expect(host.getMode()).to.equal(ActivityMode.IFRAME);
+  });
+
   it('should fail before connected', () => {
     expect(() => {
       messenger.getTarget();
@@ -55,7 +60,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
       messenger.getTargetOrigin();
     }).to.throw(/not connected/);
     expect(() => {
-      host.getTargetOrigin();
+      host.isTargetOriginVerified();
     }).to.throw(/not connected/);
     expect(() => {
       host.getArgs();
@@ -69,6 +74,22 @@ describes.realWin('ActivityIframeHost', {}, env => {
     const disconnectStub = sandbox.stub(messenger, 'disconnect');
     host.disconnect();
     expect(disconnectStub).to.be.calledOnce;
+  });
+
+  it('should failed to return properties before connect', () => {
+    expect(() => host.getRequestString())
+        .to.throw(/not connected/);
+    expect(() => host.getTargetOrigin())
+        .to.throw(/not connected/);
+    expect(() => host.isTargetOriginVerified())
+        .to.throw(/not connected/);
+    expect(() => host.getArgs())
+        .to.throw(/not connected/);
+  });
+
+  it('should not accept before connection', () => {
+    expect(() => host.accept())
+        .to.throw(/not connected/);
   });
 
   describe('commands', () => {
@@ -112,9 +133,21 @@ describes.realWin('ActivityIframeHost', {}, env => {
       });
     }
 
+    it('should return connect properties', () => {
+      expect(host.getTargetOrigin()).to.equal('https://example-pub.com');
+      expect(host.isTargetOriginVerified()).to.be.true;
+      expect(host.isSecureChannel()).to.be.true;
+      expect(host.getArgs()).to.deep.equal({a: 1});
+    });
+
+    it('should always return null request', () => {
+      expect(host.getRequestString()).to.be.null;
+    });
+
     it('should handle "start" and "close"', () => {
       const disconnectStub = sandbox.stub(host, 'disconnect');
-      return connectPromise.then(() => {
+      return connectPromise.then(connectResult => {
+        expect(connectResult).to.equal(host);
         expect(messenger.getTarget()).to.equal(win.parent);
         expect(host.getTargetOrigin()).to.equal('https://example-pub.com');
         expect(host.getArgs()).to.deep.equal({a: 1});
@@ -126,7 +159,17 @@ describes.realWin('ActivityIframeHost', {}, env => {
       });
     });
 
+    it('should not allow result/cancel/fail before accept', () => {
+      expect(() => host.result('abc'))
+          .to.throw(/not accepted/);
+      expect(() => host.cancel())
+          .to.throw(/not accepted/);
+      expect(() => host.failed(new Error('intentional')))
+          .to.throw(/not accepted/);
+    });
+
     it('should yield "result"', () => {
+      host.accept();
       const disconnectStub = sandbox.stub(host, 'disconnect');
       host.result('abc');
       expect(sendCommandStub).to.be.calledOnce;
@@ -139,6 +182,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
     });
 
     it('should yield "result" with null', () => {
+      host.accept();
       host.result(null);
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('result', {
@@ -148,6 +192,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
     });
 
     it('should yield "canceled"', () => {
+      host.accept();
       const disconnectStub = sandbox.stub(host, 'disconnect');
       host.cancel();
       expect(sendCommandStub).to.be.calledOnce;
@@ -159,6 +204,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
     });
 
     it('should yield "failed"', () => {
+      host.accept();
       const disconnectStub = sandbox.stub(host, 'disconnect');
       host.failed(new Error('broken'));
       expect(sendCommandStub).to.be.calledOnce;
@@ -169,7 +215,13 @@ describes.realWin('ActivityIframeHost', {}, env => {
       expect(disconnectStub).to.not.be.called;
     });
 
+    it('should not allow "ready" signal before accept', () => {
+      expect(() => host.ready())
+          .to.throw(/not accepted/);
+    });
+
     it('should send "ready" signal', () => {
+      host.accept();
       addEventListenerSpy = sandbox.spy(win, 'addEventListener');
       removeEventListenerSpy = sandbox.spy(win, 'removeEventListener');
       container.style.height = '111px';
@@ -238,6 +290,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
     });
 
     it('should react to window size changes', () => {
+      host.accept();
       host.ready();
       expect(host.lastMeasuredWidth_).to.equal(0);
       sendCommandStub.reset();

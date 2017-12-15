@@ -29,6 +29,8 @@ const activities = new Activities(self);
 const waitingArray = self[PROP];
 
 const publicObj = {
+  'onResult': activities.onResult.bind(activities),
+  'open': activities.open.bind(activities),
   'openIframe': activities.openIframe.bind(activities),
   'connectHost': activities.connectHost.bind(activities),
 };

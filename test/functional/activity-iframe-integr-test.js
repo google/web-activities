@@ -26,20 +26,16 @@ describes.fixture('ActivityIframePort integration', {}, env => {
   beforeEach(() => {
     fixture = env.fixture;
     const fixtureUrl = env.fixtureUrl('activity-iframe-host', 'sp');
-    const a = document.createElement('a');
-    a.href = fixtureUrl;
-    const origin = a.origin || a.protocol + '//' + a.host;
     port = new ActivityIframePort(
         env.iframe,
         fixtureUrl,
-        origin,
         {a: 1});
     return Promise.all([fixture.connected(), port.connect()]);
   });
 
   it('should return "result"', () => {
     fixture.send('return-result', 'abc');
-    return port.awaitResult().then(result => {
+    return port.acceptResult().then(result => {
       expect(result.ok).to.be.true;
       expect(result.data).to.equal('abc');
     });
@@ -47,7 +43,7 @@ describes.fixture('ActivityIframePort integration', {}, env => {
 
   it('should return "canceled"', () => {
     fixture.send('return-canceled');
-    return port.awaitResult().then(result => {
+    return port.acceptResult().then(result => {
       expect(result.ok).to.be.false;
       expect(result.code).to.equal(ActivityResultCode.CANCELED);
     });
@@ -55,7 +51,7 @@ describes.fixture('ActivityIframePort integration', {}, env => {
 
   it('should return "failed"', () => {
     fixture.send('return-failed', 'broken');
-    return port.awaitResult().then(result => {
+    return port.acceptResult().then(result => {
       expect(result.ok).to.be.false;
       expect(result.code).to.equal(ActivityResultCode.FAILED);
       expect(result.error.message).to.match(/broken/);

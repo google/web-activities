@@ -191,6 +191,16 @@ describes.realWin('Messenger', {}, env => {
       expect(onCommand.args[0][1]).to.deep.equal({a: 1});
     });
 
+    it('should initialize origin when source matches', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
+        source: target,  // This is the important part where target matches.
+      });
+      expect(messenger.getTargetOrigin()).to.equal('https://example-sp.com');
+    });
+
     it('should disallow origin initialization w/o connect', () => {
       const handler = addEventListenerSpy.args[0][1];
       handler({

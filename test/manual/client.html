@@ -28,13 +28,37 @@
   <h1>Activity Client</h1>
 
   <button onclick="startIframe()">start iframe</button>
+  <button onclick="startPopup()">start popup</button>
+  <button onclick="startRedirect()">start redirect</button>
 
+  <p></p>
+  <hr>
+  Result:
+  <pre id="result_element"></pre>
 <script>
   function whenReady(callback) {
     (window.ACTIVITIES = window.ACTIVITIES || []).push(function(activities) {
       callback(activities);
     });
   }
+
+  function printResult(result) {
+    console.log('CLIENT: result = ', result);
+    document.getElementById('result_element').textContent =
+        JSON.stringify(result, true, 2);
+  }
+
+  function printError(reason) {
+    console.log('CLIENT: failed: ', reason);
+    document.getElementById('result_element').textContent =
+        'ERROR: ' + reason;
+  }
+
+  whenReady(function(activities) {
+    activities.onResult('request1', function(port) {
+      port.acceptResult().then(printResult);
+    });
+  });
 
   function startIframe() {
     whenReady(function(activities) {
@@ -56,8 +80,7 @@
         doc.body.appendChild(iframe);
         return activities.openIframe(
             iframe,
-            'http://sp.localhost:8000/test/manual/host-iframe.html',
-            'http://sp.localhost:8000',
+            'http://sp.localhost:8000/test/manual/host.html',
             {
               publicationId: 'scenic',
             });
@@ -68,19 +91,41 @@
           container.style.height = allowed + 'px';
           port.resized();
         });
-        return port.awaitResult();
-      }).then(function(result) {
-        console.log('CLIENT: result = ', result);
-      }, function(reason) {
-        console.log('CLIENT: failed: ', reason);
-      }).then(function() {
+        return port.acceptResult();
+      }).then(printResult, printError).then(function() {
         container.parentNode.removeChild(container);
       });
       document.body.appendChild(container);
     });
   }
 
-  startIframe();
+  function startPopup() {
+    whenReady(function(activities) {
+      return activities.open(
+          'request1',
+          'http://sp.localhost:8000/test/manual/host.html',
+          'popup111',
+          {
+            publicationId: 'scenic',
+          }, {
+            width: 300,
+          });
+    });
+  }
+
+  function startRedirect() {
+    whenReady(function(activities) {
+      return activities.open(
+          'request1',
+          'http://sp.localhost:8000/test/manual/host.html',
+          '_top',
+          {
+            publicationId: 'scenic',
+          }, {
+            width: 300,
+          });
+    });
+  }
 </script>
 </body>
 </html>

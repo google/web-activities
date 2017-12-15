@@ -36,12 +36,21 @@ export class ActivityResult {
   /**
    * @param {!ActivityResultCode} code
    * @param {*} data
+   * @param {string} origin
+   * @param {boolean} originVerified
+   * @param {boolean} secureChannel
    */
-  constructor(code, data) {
+  constructor(code, data, origin, originVerified, secureChannel) {
     /** @const {!ActivityResultCode} */
     this.code = code;
     /** @const {*} */
     this.data = code == ActivityResultCode.OK ? data : null;
+    /** @const {string} */
+    this.origin = origin;
+    /** @const {boolean} */
+    this.originVerified = originVerified;
+    /** @const {boolean} */
+    this.secureChannel = secureChannel;
     /** @const {boolean} */
     this.ok = code == ActivityResultCode.OK;
     /** @const {?Error} */
@@ -50,6 +59,38 @@ export class ActivityResult {
         null;
   }
 }
+
+
+/**
+ * The activity request that different types of hosts can be started with.
+ * @typedef {{
+ *   requestId: string,
+ *   returnUrl: string,
+ *   args: ?Object,
+ * }}
+ */
+export let ActivityRequestDef;
+
+
+/**
+ * The activity "open" options used for popups and redirects.
+ * @typedef {{
+ *   returnUrl: (string|undefined),
+ *   width: (number|undefined),
+ *   height: (number|undefined),
+ * }}
+ */
+export let ActivityOpenOptionsDef;
+
+
+/**
+ * @enum {string}
+ */
+export const ActivityMode = {
+  IFRAME: 'iframe',
+  POPUP: 'popup',
+  REDIRECT: 'redirect',
+};
 
 
 /**
@@ -62,9 +103,46 @@ export class ActivityResult {
 export class ActivityPortDef {
 
   /**
-   * Disconnect the activity binding and cleanup listeners.
+   * Returns the mode of the activity: iframe, popup or redirect.
+   * @return {!ActivityMode}
    */
-  disconnect() {}
+  getMode() {}
+
+  /**
+   * The client's origin. The connection to the client must first succeed
+   * before the origin can be known with certainty.
+   * @return {string}
+   */
+  getTargetOrigin() {}
+
+  /**
+   * Whether the client's origin has been verified. This depends on the type of
+   * the client connection. When window messaging is used (for iframes and
+   * popups), the origin can be verified. In case of redirects, where state is
+   * passed in the URL, the verification is not fully possible.
+   * @return {boolean}
+   */
+  isTargetOriginVerified() {}
+
+  /**
+   * Whether the client/host communication is done via a secure channel such
+   * as messaging, or an open and easily exploitable channel, such redirect URL.
+   * Iframes and popups use a secure channel, and the redirect mode does not.
+   * @return {boolean}
+   */
+  isSecureChannel() {}
+
+  /**
+   * Accepts the result when ready. The client should verify the activity's
+   * mode, origin, verification and secure channel flags before deciding
+   * whether or not to trust the result.
+   *
+   * Returns the promise that yields when the activity has been completed and
+   * either a result, a cancelation or a failure has been returned.
+   *
+   * @return {!Promise<!ActivityResult>}
+   */
+  acceptResult() {}
 }
 
 
@@ -78,9 +156,23 @@ export class ActivityPortDef {
 export class ActivityHostDef {
 
   /**
-   * Disconnect the activity implementation and cleanup listeners.
+   * Returns the mode of the activity: iframe, popup or redirect.
+   * @return {!ActivityMode}
    */
-  disconnect() {}
+  getMode() {}
+
+  /**
+   * The request string that the host was started with. This value can be
+   * passed around while the target host is navigated.
+   *
+   * Not always available; in particular, this value is not available for
+   * iframe hosts.
+   *
+   * See `ActivityRequestDef` for more info.
+   *
+   * @return {?string}
+   */
+  getRequestString() {}
 
   /**
    * The client's origin. The connection to the client must first succeed
@@ -88,6 +180,38 @@ export class ActivityHostDef {
    * @return {string}
    */
   getTargetOrigin() {}
+
+  /**
+   * Whether the client's origin has been verified. This depends on the type of
+   * the client connection. When window messaging is used (for iframes and
+   * popups), the origin can be verified. In case of redirects, where state is
+   * passed in the URL, the verification is not fully possible.
+   * @return {boolean}
+   */
+  isTargetOriginVerified() {}
+
+  /**
+   * Whether the client/host communication is done via a secure channel such
+   * as messaging, or an open and easily exploitable channel, such redirect URL.
+   * Iframes and popups use a secure channel, and the redirect mode does not.
+   * @return {boolean}
+   */
+  isSecureChannel() {}
+
+  /**
+   * Signals to the host to accept the connection. Before the connection is
+   * accepted, no other calls can be made, such as `ready()`, `result()`, etc.
+   *
+   * Since the result of the activity could be sensitive, the host API requires
+   * you to verify the connection. The host can use the client's origin,
+   * verified flag, whether the channel is secure, activity arguments, and other
+   * properties to confirm whether the connection should be accepted.
+   *
+   * The client origin is verifiable in popup and iframe modes, but may not
+   * be verifiable in the redirect mode. The channel is secure for iframes and
+   * popups and not secure for redirects.
+   */
+  accept() {}
 
   /**
    * The arguments the activity was started with. The connection to the client
@@ -140,4 +264,9 @@ export class ActivityHostDef {
    * @param {function(number, number, boolean)} unusedCallback
    */
   onResizeComplete(unusedCallback) {}
+
+  /**
+   * Disconnect the activity implementation and cleanup listeners.
+   */
+  disconnect() {}
 }

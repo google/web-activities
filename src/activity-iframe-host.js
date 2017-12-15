@@ -15,12 +15,16 @@
  * limitations under the License.
  */
 
-import {ActivityHostDef, ActivityResultCode} from './activity-types';
+import {
+  ActivityHostDef,
+  ActivityMode,
+  ActivityResultCode,
+} from './activity-types';
 import {Messenger} from './messenger';
 
 
 /**
- * The `ActivityHost` implementation for the iframe activity. Unlike other
+ * The `ActivityHostDef` implementation for the iframe activity. Unlike other
  * types of activities, this implementation can realistically request and
  * receive new size.
  *
@@ -50,13 +54,16 @@ export class ActivityIframeHost {
     /** @private {boolean} */
     this.connected_ = false;
 
-    /** @private {?function()} */
+    /** @private {?function(!ActivityHostDef)} */
     this.connectedResolver_ = null;
 
-    /** @private @const {!Promise} */
+    /** @private @const {!Promise<!ActivityHostDef>} */
     this.connectedPromise_ = new Promise(resolve => {
       this.connectedResolver_ = resolve;
     });
+
+    /** @private {boolean} */
+    this.accepted_ = false;
 
     /** @private {?function(number, number, boolean)} */
     this.onResizeComplete_ = null;
@@ -76,10 +83,11 @@ export class ActivityIframeHost {
 
   /**
    * Connects the activity to the client.
-   * @return {!Promise}
+   * @return {!Promise<!ActivityHostDef>}
    */
   connect() {
     this.connected_ = false;
+    this.accepted_ = false;
     this.messenger_.connect(this.handleCommand_.bind(this));
     this.messenger_.sendCommand('connect');
     return this.connectedPromise_;
@@ -88,20 +96,50 @@ export class ActivityIframeHost {
   /** @override */
   disconnect() {
     this.connected_ = false;
+    this.accepted_ = false;
     this.messenger_.disconnect();
     this.win_.removeEventListener('resize', this.boundResizeEvent_);
   }
 
   /** @override */
+  getRequestString() {
+    this.ensureConnected_();
+    // Not available for iframes.
+    return null;
+  }
+
+  /** @override */
+  getMode() {
+    return ActivityMode.IFRAME;
+  }
+
+  /** @override */
   getTargetOrigin() {
+    this.ensureConnected_();
     return this.messenger_.getTargetOrigin();
   }
 
   /** @override */
+  isTargetOriginVerified() {
+    this.ensureConnected_();
+    // The origin is always verified via messaging.
+    return true;
+  }
+
+  /** @override */
+  isSecureChannel() {
+    return true;
+  }
+
+  /** @override */
+  accept() {
+    this.ensureConnected_();
+    this.accepted_ = true;
+  }
+
+  /** @override */
   getArgs() {
-    if (!this.connected_) {
-      throw new Error('not connected');
-    }
+    this.ensureConnected_();
     return this.args_;
   }
 
@@ -111,6 +149,7 @@ export class ActivityIframeHost {
    * @override
    */
   ready() {
+    this.ensureAccepted_();
     this.messenger_.sendCommand('ready');
     this.resized_();
     this.win_.addEventListener('resize', this.boundResizeEvent_);
@@ -146,12 +185,27 @@ export class ActivityIframeHost {
     this.sendResult_(ActivityResultCode.FAILED, String(reason));
   }
 
+  /** @private */
+  ensureConnected_() {
+    if (!this.connected_) {
+      throw new Error('not connected');
+    }
+  }
+
+  /** @private */
+  ensureAccepted_() {
+    if (!this.accepted_) {
+      throw new Error('not accepted');
+    }
+  }
+
   /**
    * @param {!ActivityResultCode} code
    * @param {*} data
    * @private
    */
   sendResult_(code, data) {
+    this.ensureAccepted_();
     this.messenger_.sendCommand('result', {
       'code': code,
       'data': data,
@@ -169,7 +223,8 @@ export class ActivityIframeHost {
       // Response to "connect" command.
       this.args_ = payload;
       this.connected_ = true;
-      this.connectedResolver_();
+      this.connectedResolver_(this);
+      this.connectedResolver_ = null;
     } else if (cmd == 'close') {
       this.disconnect();
     } else if (cmd == 'resized') {
