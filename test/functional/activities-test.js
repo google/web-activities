@@ -95,22 +95,18 @@ describes.realWin('Activities', {}, env => {
   describe('open/onResult', () => {
     let openStub;
     let port;
-    let resultPromise, resultResolver;
-    let acceptResultStub;
+    let openPromise, openResolver;
 
     beforeEach(() => {
       port = null;
+      openPromise = new Promise(resolve => {
+        openResolver = resolve;
+      });
       openStub = sandbox.stub(ActivityWindowPort.prototype, 'open',
           function() {
             port = this;
+            return openPromise;
           });
-      resultPromise = new Promise(resolve => {
-        resultResolver = resolve;
-      });
-      acceptResultStub = sandbox.stub(
-          ActivityWindowPort.prototype,
-          'acceptResult',
-          () => resultPromise);
     });
 
     it('should open window', () => {
@@ -121,7 +117,6 @@ describes.realWin('Activities', {}, env => {
           {a: 1},
           {width: 300});
       expect(openStub).to.be.calledOnce;
-      expect(acceptResultStub).to.be.calledOnce;
       expect(port).to.exist;
       expect(port).to.be.instanceof(ActivityWindowPort);
       expect(port.requestId_).to.equal('request1');
@@ -137,7 +132,6 @@ describes.realWin('Activities', {}, env => {
           'https://example.com/file',
           '_blank');
       expect(openStub).to.be.calledOnce;
-      expect(acceptResultStub).to.be.calledOnce;
       expect(port.args_).to.be.null;
       expect(port.options_).to.be.null;
     });
@@ -153,8 +147,8 @@ describes.realWin('Activities', {}, env => {
 
       // Yield result.
       const result = new ActivityResult(ActivityResultCode.OK, 'success');
-      resultResolver(result);
-      return resultPromise.then(() => {
+      openResolver(result);
+      return openPromise.then(() => {
         // Skip a microtask.
         return Promise.resolve();
       }).then(() => {
@@ -187,8 +181,8 @@ describes.realWin('Activities', {}, env => {
 
       // Yield result.
       const result = new ActivityResult(ActivityResultCode.OK, 'success');
-      resultResolver(result);
-      return resultPromise.then(() => {
+      openResolver(result);
+      return openPromise.then(() => {
         // Skip a microtask.
         return Promise.resolve();
       }).then(() => {
@@ -224,8 +218,8 @@ describes.realWin('Activities', {}, env => {
 
       // Yield result.
       const result = new ActivityResult(ActivityResultCode.OK, 'success');
-      resultResolver(result);
-      return resultPromise.then(() => {
+      openResolver(result);
+      return openPromise.then(() => {
         // Skip a microtask.
         return Promise.resolve();
       }).then(() => {

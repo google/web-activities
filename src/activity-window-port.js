@@ -99,10 +99,15 @@ export class ActivityWindowPort {
   }
 
   /**
-   * Opens the window.
+   * Opens the activity in a window, either as a popup or via redirect.
+   *
+   * Returns the promise that will yield when the window returns or closed.
+   * Notice, that this promise may never complete if "redirect" mode was used.
+   *
+   * @return {!Promise}
    */
   open() {
-    this.openInternal_();
+    return this.openInternal_();
   }
 
   /**
@@ -156,6 +161,7 @@ export class ActivityWindowPort {
    * with the `_top` target. This is necessary given that in some embedding
    * scenarios, such as iOS' WKWebView, navigation to `_blank` and other targets
    * is blocked by default.
+   * @return {!Promise}
    * @private
    */
   openInternal_() {
@@ -205,6 +211,11 @@ export class ActivityWindowPort {
     } else {
       this.disconnectWithError_(new Error('failed to open window'));
     }
+
+    // Return result promise, even though it may never complete.
+    return this.resultPromise_.catch(() => {
+      // Ignore. Call to the `acceptResult()` should fail if needed.
+    });
   }
 
   /**

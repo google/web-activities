@@ -100,10 +100,9 @@ export class Activities {
   open(requestId, url, target, opt_args, opt_options) {
     const port = new ActivityWindowPort(
         this.win_, requestId, url, target, opt_args, opt_options);
-    port.open();
-    // Await result if possible. Notice that when falling back to "redirect",
-    // the result will never arrive through this port.
-    port.acceptResult().then(() => {
+    port.open().then(() => {
+      // Await result if possible. Notice that when falling back to "redirect",
+      // the result will never arrive through this port.
       this.consumeResultAll_(requestId, port);
     });
   }
