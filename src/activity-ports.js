@@ -15,18 +15,11 @@
  * limitations under the License.
  */
 
-import {
-  ActivityHostDef,
-  ActivityOpenOptionsDef,
-  ActivityPortDef,
-  ActivityRequestDef,
-} from './activity-types';
-import {ActivityIframeHost} from './activity-iframe-host';
 import {ActivityIframePort} from './activity-iframe-port';
 import {
-  ActivityWindowPopupHost,
-  ActivityWindowRedirectHost,
-} from './activity-window-host';
+  ActivityOpenOptionsDef,
+  ActivityPortDef,
+} from './activity-types';
 import {
   ActivityWindowPort,
   discoverRedirectPort,
@@ -34,10 +27,11 @@ import {
 
 
 /**
- * The page-level activities manager. This class is intended to be used as a
- * singleton. It can start activities as well as implement them.
+ * The page-level activities manager ports. This class is intended to be used
+ * as a singleton. It can start activities of all modes: iframe, popup, and
+ * redirect.
  */
-export class Activities {
+export class ActivityPorts {
 
   /**
    * @param {!Window} win
@@ -121,7 +115,7 @@ export class Activities {
    *
    * A typical implementation would look like:
    * ```
-   * activities.onResult('request1', function(port) {
+   * ports.onResult('request1', function(port) {
    *   // Only verified origins are allowed.
    *   if (port.getTargetOrigin() == expectedOrigin &&
    *       port.isTargetOriginVerified() &&
@@ -132,7 +126,7 @@ export class Activities {
    *   }
    * })
    *
-   * activties.open('request1', request1Url, '_blank');
+   * ports.open('request1', request1Url, '_blank');
    * ```
    *
    * @param {string} requestId
@@ -151,26 +145,6 @@ export class Activities {
     if (availableResult) {
       this.consumeResult_(availableResult, callback);
     }
-  }
-
-  /**
-   * Start activity implementation handler (host).
-   * @param {(?ActivityRequestDef|?string)=} opt_request
-   * @return {!Promise<!ActivityHostDef>}
-   */
-  connectHost(opt_request) {
-    let host;
-    if (this.win_.top != this.win_) {
-      // Iframe host.
-      host = new ActivityIframeHost(this.win_);
-    } else if (this.win_.opener && !this.win_.opener.closed) {
-      // Window host: popup.
-      host = new ActivityWindowPopupHost(this.win_);
-    } else {
-      // Window host: redirect.
-      host = new ActivityWindowRedirectHost(this.win_);
-    }
-    return host.connect(opt_request);
   }
 
   /**

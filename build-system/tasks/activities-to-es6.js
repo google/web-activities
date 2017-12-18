@@ -24,19 +24,20 @@ const version = json.version;
 const main = json.main;
 
 /**
+ * @param {string} inputFile
  * @return {!Promise}
  */
-exports.rollupActivities = function() {
+exports.rollupActivities = function(inputFile, outputFile) {
   mkdirSync('build');
   mkdirSync('dist');
+  let js;
   return exec(
       './node_modules/rollup/bin/rollup' +
-      ' index.js' +
+      ' "' + inputFile + '"' +
       ' --f es' +
-      ' --no-treeshake' +
       ' --o build/activities-rollup.js'
   ).then(() => {
-    let js = fs.readFileSync('build/activities-rollup.js', 'utf8');
+    js = fs.readFileSync('build/activities-rollup.js', 'utf8');
     // 1. Rearrange one license on top.
     const license = fs.readFileSync(
         'build-system/tasks/license-header.txt', 'utf8').trim();
@@ -63,7 +64,7 @@ exports.rollupActivities = function() {
 
     return js;
   }).then(js => {
-    fs.writeFileSync(main, js);
+    fs.writeFileSync(outputFile, js);
   });
 };
 

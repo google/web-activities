@@ -61,7 +61,7 @@
   }
 
   whenReady(function(activities) {
-    activities.onResult('request1', function(port) {
+    activities.ports.onResult('request1', function(port) {
       port.acceptResult().then(printResult);
     });
   });
@@ -84,7 +84,7 @@
         iframe.setAttribute('frameborder', '0');
         iframe.setAttribute('scrolling', 'no');
         doc.body.appendChild(iframe);
-        return activities.openIframe(
+        return activities.ports.openIframe(
             iframe,
             HOST_URL,
             ARGS);
@@ -105,7 +105,7 @@
 
   function startPopup() {
     whenReady(function(activities) {
-      return activities.open(
+      return activities.ports.open(
           'request1',
           HOST_URL,
           'popup111',
@@ -117,7 +117,7 @@
 
   function startRedirect() {
     whenReady(function(activities) {
-      return activities.open(
+      return activities.ports.open(
           'request1',
           HOST_URL,
           '_top',

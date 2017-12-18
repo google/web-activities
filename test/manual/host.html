@@ -48,7 +48,7 @@
 
   whenReady(function(activities) {
     var host;
-    activities.connectHost().then(function(aHost) {
+    activities.hosts.connectHost().then(function(aHost) {
       host = aHost;
       var origin = host.getTargetOrigin();
       var args = host.getArgs();
