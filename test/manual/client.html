@@ -36,6 +36,12 @@
   Result:
   <pre id="result_element"></pre>
 <script>
+
+  var HOST_URL = 'http://sp.localhost:8000/test/manual/host.html';
+  var ARGS = {
+    publicationId: 'scenic',
+  };
+
   function whenReady(callback) {
     (window.ACTIVITIES = window.ACTIVITIES || []).push(function(activities) {
       callback(activities);
@@ -80,10 +86,8 @@
         doc.body.appendChild(iframe);
         return activities.openIframe(
             iframe,
-            'http://sp.localhost:8000/test/manual/host.html',
-            {
-              publicationId: 'scenic',
-            });
+            HOST_URL,
+            ARGS);
       }).then(function(port) {
         port.onResizeRequest(function(height) {
           var allowed = Math.min(height, 200);
@@ -103,11 +107,9 @@
     whenReady(function(activities) {
       return activities.open(
           'request1',
-          'http://sp.localhost:8000/test/manual/host.html',
+          HOST_URL,
           'popup111',
-          {
-            publicationId: 'scenic',
-          }, {
+          ARGS, {
             width: 300,
           });
     });
@@ -117,13 +119,9 @@
     whenReady(function(activities) {
       return activities.open(
           'request1',
-          'http://sp.localhost:8000/test/manual/host.html',
+          HOST_URL,
           '_top',
-          {
-            publicationId: 'scenic',
-          }, {
-            width: 300,
-          });
+          ARGS);
     });
   }
 </script>
