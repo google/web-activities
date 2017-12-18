@@ -15,25 +15,20 @@
  * limitations under the License.
  */
 
-import {Activities} from '../../src/activities';
+import {ActivityPorts} from '../../src/activity-ports';
 import {ActivityIframePort} from '../../src/activity-iframe-port';
-import {ActivityIframeHost} from '../../src/activity-iframe-host';
 import {ActivityResult, ActivityResultCode} from '../../src/activity-types';
 import {ActivityWindowPort} from '../../src/activity-window-port';
-import {
-  ActivityWindowPopupHost,
-  ActivityWindowRedirectHost,
-} from '../../src/activity-window-host';
 
 
-describes.realWin('Activities', {}, env => {
+describes.realWin('ActivityPorts', {}, env => {
   let win, doc;
-  let activities;
+  let ports;
 
   beforeEach(() => {
     win = env.win;
     doc = win.document;
-    activities = new Activities(win);
+    ports = new ActivityPorts(win);
   });
 
   describe('openIframe', () => {
@@ -54,7 +49,7 @@ describes.realWin('Activities', {}, env => {
     });
 
     it('should open an iframe and connect', () => {
-      const promise = activities.openIframe(
+      const promise = ports.openIframe(
           iframe,
           'https://example.com/iframe',
           {a: 1});
@@ -69,7 +64,7 @@ describes.realWin('Activities', {}, env => {
     });
 
     it('should open an iframe with no args', () => {
-      const promise = activities.openIframe(
+      const promise = ports.openIframe(
           iframe,
           'https://example.com/iframe');
       connectResolve();
@@ -83,7 +78,7 @@ describes.realWin('Activities', {}, env => {
     });
 
     it('should fail opening an iframe if connect fails', () => {
-      const promise = activities.openIframe(
+      const promise = ports.openIframe(
           iframe,
           'https://example.com/iframe',
           {a: 1});
@@ -110,7 +105,7 @@ describes.realWin('Activities', {}, env => {
     });
 
     it('should open window', () => {
-      activities.open(
+      ports.open(
           'request1',
           'https://example.com/file',
           '_blank',
@@ -127,7 +122,7 @@ describes.realWin('Activities', {}, env => {
     });
 
     it('should open window with no args or options', () => {
-      activities.open(
+      ports.open(
           'request1',
           'https://example.com/file',
           '_blank');
@@ -138,8 +133,8 @@ describes.realWin('Activities', {}, env => {
 
     it('should yield onResult registered before or after popup', () => {
       const onResultSpy = sandbox.spy();
-      activities.onResult('request1', onResultSpy);
-      activities.open(
+      ports.onResult('request1', onResultSpy);
+      ports.open(
           'request1',
           'https://example.com/file',
           '_blank');
@@ -156,7 +151,7 @@ describes.realWin('Activities', {}, env => {
         expect(onResultSpy.args[0][0]).to.equal(port);
 
         // Repeat, after popup.
-        activities.onResult('request1', onResultSpy);
+        ports.onResult('request1', onResultSpy);
         expect(onResultSpy).to.be.calledOnce;
         // Skip a microtask.
         return Promise.resolve();
@@ -170,9 +165,9 @@ describes.realWin('Activities', {}, env => {
       const onResultSpy1 = sandbox.spy();
       const onResultSpy2 = sandbox.spy();
       const onResultSpy3 = sandbox.spy();
-      activities.onResult('request1', onResultSpy1);
-      activities.onResult('request1', onResultSpy2);
-      activities.open(
+      ports.onResult('request1', onResultSpy1);
+      ports.onResult('request1', onResultSpy2);
+      ports.open(
           'request1',
           'https://example.com/file',
           '_blank');
@@ -192,7 +187,7 @@ describes.realWin('Activities', {}, env => {
         expect(onResultSpy2.args[0][0]).to.equal(port);
 
         // Repeat, after popup.
-        activities.onResult('request1', onResultSpy3);
+        ports.onResult('request1', onResultSpy3);
         expect(onResultSpy3).to.not.be.called;
         // Skip a microtask.
         return Promise.resolve();
@@ -209,9 +204,9 @@ describes.realWin('Activities', {}, env => {
         throw new Error('intentional');
       };
       const onResultSpy2 = sandbox.spy();
-      activities.onResult('request1', onResultSpy1);
-      activities.onResult('request1', onResultSpy2);
-      activities.open(
+      ports.onResult('request1', onResultSpy1);
+      ports.onResult('request1', onResultSpy2);
+      ports.open(
           'request1',
           'https://example.com/file',
           '_blank');
@@ -236,15 +231,15 @@ describes.realWin('Activities', {}, env => {
             data: 'ok',
             origin: 'https://example.com',
           }));
-      const activities = new Activities(win);
+      const ports = new ActivityPorts(win);
 
       const onResultSpy1 = sandbox.spy();
       const onResultSpy2 = sandbox.spy();
       const onResultSpy3 = sandbox.spy();
       const otherSpy = sandbox.spy();
-      activities.onResult('request1', onResultSpy1);
-      activities.onResult('request1', onResultSpy2);
-      activities.onResult('request2', otherSpy);
+      ports.onResult('request1', onResultSpy1);
+      ports.onResult('request1', onResultSpy2);
+      ports.onResult('request2', otherSpy);
       expect(onResultSpy1).to.not.be.called;
       expect(onResultSpy2).to.not.be.called;
 
@@ -258,7 +253,7 @@ describes.realWin('Activities', {}, env => {
         expect(onResultSpy2.args[0][0]).to.equal(port);
 
         // Repeat, after popup.
-        activities.onResult('request1', onResultSpy3);
+        ports.onResult('request1', onResultSpy3);
         expect(onResultSpy3).to.not.be.called;
         // Skip a microtask.
         return Promise.resolve();
@@ -268,109 +263,6 @@ describes.realWin('Activities', {}, env => {
         expect(onResultSpy3).to.be.calledOnce;
         expect(onResultSpy3.args[0][0]).to.equal(port);
         expect(otherSpy).to.not.be.called;
-      });
-    });
-  });
-
-  describe('connectHost', () => {
-    let initialHost;
-    let connectPromise, connectResolve, connectReject;
-    let popupConnectStub;
-
-    beforeEach(() => {
-      connectPromise = new Promise((resolve, reject) => {
-        connectResolve = resolve;
-        connectReject = reject;
-      });
-      sandbox.stub(
-          ActivityIframeHost.prototype,
-          'connect',
-          function() {
-            initialHost = this;
-            return connectPromise;
-          });
-      popupConnectStub = sandbox.stub(
-          ActivityWindowPopupHost.prototype,
-          'connect',
-          function() {
-            initialHost = this;
-            return connectPromise;
-          });
-      sandbox.stub(
-          ActivityWindowRedirectHost.prototype,
-          'connect',
-          function() {
-            initialHost = this;
-            return connectPromise;
-          });
-    });
-
-    it('should connect the host', () => {
-      const promise = activities.connectHost();
-      connectResolve(initialHost);
-      return promise.then(host => {
-        expect(host).to.be.instanceof(ActivityIframeHost);
-      });
-    });
-
-    it('should fail if connect fails', () => {
-      const promise = activities.connectHost();
-      connectReject(new Error('intentional'));
-      return expect(promise).to.eventually.be.rejectedWith('intentional');
-    });
-
-    describe('types of hosts', () => {
-      beforeEach(() => {
-        win = {
-          location: {},
-        };
-        win.top = win;
-        activities = new Activities(win);
-      });
-
-      it('should connect iframe host', () => {
-        win.top = {};  // Iframe: top != this.
-        const promise = activities.connectHost();
-        connectResolve(initialHost);
-        return promise.then(host => {
-          expect(host).to.be.instanceof(ActivityIframeHost);
-        });
-      });
-
-      it('should connect popup host', () => {
-        win.opener = {};  // Popup: opener exists.
-        const promise = activities.connectHost();
-        connectResolve(initialHost);
-        return promise.then(host => {
-          expect(host).to.be.instanceof(ActivityWindowPopupHost);
-        });
-      });
-
-      it('should connect redirect host', () => {
-        win.opener = null;  // Redirect: no opener.
-        const promise = activities.connectHost();
-        connectResolve(initialHost);
-        return promise.then(host => {
-          expect(host).to.be.instanceof(ActivityWindowRedirectHost);
-        });
-      });
-
-      it('should delegate to another host', () => {
-        const other = {};
-        win.opener = {};  // Popup: opener exists.
-        const promise = activities.connectHost();
-        connectResolve(other);
-        return promise.then(host => {
-          expect(host).to.equal(other);
-        });
-      });
-
-      it('should propagate request', () => {
-        const request = {};
-        win.opener = {};  // Popup: opener exists.
-        activities.connectHost(request);
-        expect(popupConnectStub).to.be.calledOnce;
-        expect(popupConnectStub).to.be.calledWith(request);
       });
     });
   });

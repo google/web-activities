@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import {Activities} from './src/activities';
+import {ActivityHosts} from './src/activity-hosts';
+import {ActivityPorts} from './src/activity-ports';
 import {
   ActivityHostDef,
   ActivityMode,
@@ -34,7 +35,8 @@ import {
 import {ActivityWindowPort} from './src/activity-window-port';
 
 module.exports = {
-  Activities,
+  ActivityHosts,
+  ActivityPorts,
   ActivityHostDef,
   ActivityIframeHost,
   ActivityIframePort,

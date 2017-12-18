@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2017 The Web Activities Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +15,28 @@
  * limitations under the License.
  */
 
-/**
- * @fileoverview
- * The entry point for Web Activities Activites (activities.js).
- */
+import {ActivityHosts} from './src/activity-hosts';
+import {
+  ActivityHostDef,
+  ActivityMode,
+  ActivityRequestDef,
+  ActivityResult,
+  ActivityResultCode,
+} from './src/activity-types';
+import {ActivityIframeHost} from './src/activity-iframe-host';
+import {
+  ActivityWindowPopupHost,
+  ActivityWindowRedirectHost,
+} from './src/activity-window-host';
 
-import './polyfills';
-import {install} from './main-install';
-
-
-install(self);
-
-if (self.console && self.console.info) {
-  self.console.info('Activities: $internalRuntimeVersion$');
-}
+module.exports = {
+  ActivityHosts,
+  ActivityHostDef,
+  ActivityIframeHost,
+  ActivityMode,
+  ActivityRequestDef,
+  ActivityResult,
+  ActivityResultCode,
+  ActivityWindowPopupHost,
+  ActivityWindowRedirectHost,
+};

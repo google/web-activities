@@ -76,7 +76,11 @@ function dist() {
     return Promise.all([
       compile({minify: true, checkTypes: true}),
     ]).then(() => {
-      return rollupActivities();
+      return rollupActivities('./index.js', 'activities.js');
+    }).then(() => {
+      return rollupActivities('./index-ports.js', 'activity-ports.js');
+    }).then(() => {
+      return rollupActivities('./index-hosts.js', 'activity-hosts.js');
     });
   });
 }
