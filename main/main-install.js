@@ -27,6 +27,10 @@ export function install(win) {
   const activityPorts = new ActivityPorts(win);
   const activityHosts = new ActivityHosts(win);
   const activities = {};
+  Object.defineProperty(activities, 'version', {
+    value: '$internalRuntimeVersion$',
+    configurable: false,
+  });
   Object.defineProperty(activities, 'ports', {
     get: () => activityPorts,
   });

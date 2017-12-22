@@ -47,6 +47,7 @@
   }
 
   whenReady(function(activities) {
+    console.log('HOST ACTIVITIES: ', activities.version, activities.hosts.version);
     var host;
     activities.hosts.connectHost().then(function(aHost) {
       host = aHost;

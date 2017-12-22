@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 0.2.0 */
+ /** Version: 0.3.0 */
 'use strict';
 
 
@@ -1063,6 +1063,9 @@ class ActivityPorts {
    * @param {!Window} win
    */
   constructor(win) {
+    /** @const {string} */
+    this.version = '0.3.0';
+
     /** @private @const {!Window} */
     this.win_ = win;
 

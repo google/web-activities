@@ -62,6 +62,7 @@ module.exports = {
   lintGlobs: [
     '**/*.js',
     '!**/*.extern.js',
+    '!**/*.min.js',
     '!{node_modules,build,dist,third_party,build-system}/**/*.*',
     '!{testing}/**/*.*',
     '!test/describes.js',
@@ -77,6 +78,7 @@ module.exports = {
   ],
   presubmitGlobs: [
     '**/*.{js,go}',
+    '!**/*.min.js',
     '!{node_modules,build,dist}/**/*.*',
     '!build-system/tasks/*.js',
     '!build-system/server/*.js',

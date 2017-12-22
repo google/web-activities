@@ -18,10 +18,8 @@
 const BBPromise = require('bluebird');
 const exec = BBPromise.promisify(require('child_process').exec);
 const fs = require('fs-extra');
+const version = require('./internal-version').VERSION;
 
-const json = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-const version = json.version;
-const main = json.main;
 
 /**
  * @param {string} inputFile
@@ -61,6 +59,9 @@ exports.rollupActivities = function(inputFile, outputFile) {
 
     // 2. Strip "Def"
     js = js.replace(/Def/g, '');
+
+    // 3. Replace "$internalRuntimeVersion$".
+    js = js.replace(/\$internalRuntimeVersion\$/g, version);
 
     return js;
   }).then(js => {
