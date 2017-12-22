@@ -15,9 +15,13 @@
  */
 'use strict';
 
-var argv = require('minimist')(process.argv.slice(2));
-var crypto = require('crypto');
+const argv = require('minimist')(process.argv.slice(2));
+const crypto = require('crypto');
+const fs = require('fs-extra');
+
+const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const packageVersion = packageJson.version;
 
 // Used to e.g. references the ads binary from the runtime to get
 // version lock.
-exports.VERSION = argv.version ? String(argv.version) : String(Date.now());
+exports.VERSION = argv.version ? String(argv.version) : String(packageVersion);

@@ -24,7 +24,3 @@ import {install} from './main-install';
 
 
 install(self);
-
-if (self.console && self.console.info) {
-  self.console.info('Activities: $internalRuntimeVersion$');
-}

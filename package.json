@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "web-activities",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Web Activities",
   "main": "./activities.js",
   "engines": {
@@ -29,7 +29,9 @@
     "LICENSE",
     "activities.js",
     "activity-hosts.js",
-    "activity-ports.js"
+    "activity-ports.js",
+    "activities.min.js",
+    "activities.min.js.map"
   ],
   "dependencies": {
     "promise-pjs": "1.1.3"

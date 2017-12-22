@@ -36,7 +36,8 @@ var internalRuntimeVersion = require('./internal-version').VERSION;
 /**
  * @return {!Promise}
  */
-exports.compile = function(opts) {
+exports.compile = function(opt_opts) {
+  const opts = opt_opts || {};
   mkdirSync('build');
   mkdirSync('build/cc');
   mkdirSync('build/fake-module');
@@ -49,12 +50,13 @@ exports.compile = function(opts) {
     compileJs('./main/', 'main', './dist',
       Object.assign({
         toName: 'activities.max.js',
-        minifiedName: 'activities.js',
+        minifiedName: opts.checkTypes ?
+            'activities.checktypes.js' : 'activities.min.js',
         includePolyfills: true,
         // If there is a sync JS error during initial load,
         // at least try to unhide the body.
         wrapper: '(function(){<%= contents %>})();'
-      }, opts || {})),
+      }, opts)),
     ]);
 }
 

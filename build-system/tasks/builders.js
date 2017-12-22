@@ -74,8 +74,14 @@ function dist() {
   process.env.NODE_ENV = 'production';
   return clean().then(() => {
     return Promise.all([
-      compile({minify: true, checkTypes: true}),
+      compile({minify: true, checkTypes: false, isProdBuild: true}),
     ]).then(() => {
+      // Push main "min" files to root to make them available to npm package.
+      fs.copySync('./dist/activities.min.js', './activities.min.js');
+      fs.copySync('./dist/activities.min.js.map', './activities.min.js.map');
+      // Check types now.
+      return compile({minify: true, checkTypes: true});
+    }).then(() => {
       return rollupActivities('./index.js', 'activities.js');
     }).then(() => {
       return rollupActivities('./index-ports.js', 'activity-ports.js');

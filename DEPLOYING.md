@@ -7,8 +7,8 @@ NPM login with credentials to web-activities package is required to publish.
 Once changes are made to the core library and have been approved, follow
 these steps to publish latest version to NPM:
 
-* Bump the version number in package.json such as: version: "1.0.20" -> "1.0.21"
-* Run the `'gulp dist'` task. This will generate the file `'./activities.js'`.
+* Bump the version number in package.json such as: version: "1.0.20" -> "1.0.21".
+* Run the `'gulp dist'` task. This will generate `'./activities.js'` and `'./activities.min.js'` files.
 * The `'./activities.js'` file is referred in the `'main'` attribute of
   `'package.json'`.
 

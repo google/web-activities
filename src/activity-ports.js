@@ -37,6 +37,9 @@ export class ActivityPorts {
    * @param {!Window} win
    */
   constructor(win) {
+    /** @const {string} */
+    this.version = '$internalRuntimeVersion$';
+
     /** @private @const {!Window} */
     this.win_ = win;
 
