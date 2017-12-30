@@ -458,6 +458,40 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
     });
   });
 
+  it('should connect with null request', () => {
+    const request = {
+      requestId: 'request1',
+      returnUrl: 'https://example.com/opener',
+      args: {a: 1},
+    };
+    win.location.hash = '#__WA__=' +
+        encodeURIComponent(serializeRequest(request));
+    return host.connect(null).then(result => {
+      expect(result).to.equal(host);
+      expect(host.getTargetOrigin()).to.equal('https://example.com');
+      expect(host.isTargetOriginVerified()).to.be.false;
+      expect(host.isSecureChannel()).to.be.false;
+      expect(host.getRequestString()).to.equal(serializeRequest(request));
+    });
+  });
+
+  it('should connect with empty string request', () => {
+    const request = {
+      requestId: 'request1',
+      returnUrl: 'https://example.com/opener',
+      args: {a: 1},
+    };
+    win.location.hash = '#__WA__=' +
+        encodeURIComponent(serializeRequest(request));
+    return host.connect('').then(result => {
+      expect(result).to.equal(host);
+      expect(host.getTargetOrigin()).to.equal('https://example.com');
+      expect(host.isTargetOriginVerified()).to.be.false;
+      expect(host.isSecureChannel()).to.be.false;
+      expect(host.getRequestString()).to.equal(serializeRequest(request));
+    });
+  });
+
   describe('commands', () => {
     let clock;
     let request;

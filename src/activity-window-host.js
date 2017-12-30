@@ -323,7 +323,7 @@ export class ActivityWindowRedirectHost {
       this.connected_ = false;
       this.accepted_ = false;
       let request;
-      if (typeof opt_request == 'object') {
+      if (opt_request && typeof opt_request == 'object') {
         request = opt_request;
       } else {
         let requestString;
