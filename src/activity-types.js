@@ -74,8 +74,17 @@ export let ActivityRequestDef;
 
 /**
  * The activity "open" options used for popups and redirects.
+ *
+ * - returnUrl: override the return URL. By default, the current URL will be
+ *   used.
+ * - skipRequestInUrl: removes the activity request from the URL, in case
+ *   redirect is used. By default, the activity request is appended to the
+ *   activity URL. This option can be used if the activity request is passed
+ *   to the activity by some alternative means.
+ *
  * @typedef {{
  *   returnUrl: (string|undefined),
+ *   skipRequestInUrl: (boolean|undefined),
  *   width: (number|undefined),
  *   height: (number|undefined),
  * }}

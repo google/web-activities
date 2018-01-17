@@ -173,6 +173,15 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         .to.throw(/not connected/);
   });
 
+  it('should not allow result/cancel/failed before connect', () => {
+    expect(() => host.result({}))
+        .to.throw(/not connected|not accepted/);
+    expect(() => host.cancel())
+        .to.throw(/not connected/);
+    expect(() => host.failed(new Error('intentional')))
+        .to.throw(/not connected/);
+  });
+
   describe('commands', () => {
     let connectPromise;
     let onEvent;
@@ -240,13 +249,27 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       });
     });
 
-    it('should not allow result/cancel/fail before accept', () => {
+    it('should NOT allow result before accept', () => {
       expect(() => host.result('abc'))
           .to.throw(/not accepted/);
-      expect(() => host.cancel())
-          .to.throw(/not accepted/);
-      expect(() => host.failed(new Error('intentional')))
-          .to.throw(/not accepted/);
+    });
+
+    it('should allow cancel before accept', () => {
+      host.cancel();
+      expect(sendCommandStub).to.be.calledOnce;
+      expect(sendCommandStub).to.be.calledWith('result', {
+        code: 'canceled',
+        data: null,
+      });
+    });
+
+    it('should allow failed before accept', () => {
+      host.failed(new Error('intentional'));
+      expect(sendCommandStub).to.be.calledOnce;
+      expect(sendCommandStub).to.be.calledWith('result', {
+        code: 'failed',
+        data: 'Error: intentional',
+      });
     });
 
     it('should yield "result"', () => {
@@ -392,6 +415,15 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
         .to.throw(/not connected/);
   });
 
+  it('should not allow result/cancel/failed before connect', () => {
+    expect(() => host.result({}))
+        .to.throw(/not connected|not accepted/);
+    expect(() => host.cancel())
+        .to.throw(/not connected/);
+    expect(() => host.failed(new Error('intentional')))
+        .to.throw(/not connected/);
+  });
+
   it('should connect with request object', () => {
     const request = {
       requestId: 'request1',
@@ -532,13 +564,22 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
           .to.be.equal(serializeRequest(request));
     });
 
-    it('should not allow result/cancel/fail before accept', () => {
+    it('should NOT allow result before accept', () => {
       expect(() => host.result('abc'))
           .to.throw(/not accepted/);
-      expect(() => host.cancel())
-          .to.throw(/not accepted/);
-      expect(() => host.failed(new Error('intentional')))
-          .to.throw(/not accepted/);
+    });
+
+    it('should allow cancel before accept', () => {
+      host.cancel();
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(returnUrl('canceled', null));
+    });
+
+    it('should allow failed before accept', () => {
+      host.failed(new Error('broken'));
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(
+          returnUrl('failed', 'Error: broken'));
     });
 
     it('should yield "result"', () => {

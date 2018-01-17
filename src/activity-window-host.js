@@ -225,7 +225,12 @@ export class ActivityWindowPopupHost {
    * @private
    */
   sendResult_(code, data) {
-    this.ensureAccepted_();
+    // Only require "accept" for successful return.
+    if (code == ActivityResultCode.OK) {
+      this.ensureAccepted_();
+    } else {
+      this.ensureConnected_();
+    }
     this.messenger_.sendCommand('result', {
       'code': code,
       'data': data,
@@ -459,7 +464,12 @@ export class ActivityWindowRedirectHost {
    * @private
    */
   sendResult_(code, data) {
-    this.ensureAccepted_();
+    // Only require "accept" for successful return.
+    if (code == ActivityResultCode.OK) {
+      this.ensureAccepted_();
+    } else {
+      this.ensureConnected_();
+    }
     const response = {
       'requestId': this.requestId_,
       'origin': getWindowOrigin(this.win_),

@@ -83,6 +83,29 @@ describe('utils', () => {
     });
   });
 
+  describe('addFragmentParam', () => {
+    it('should add with no fragment', () => {
+      expect(utils.addFragmentParam(
+          'https://example.com/doc',
+          'key', 'value 1'))
+          .to.equal('https://example.com/doc#key=value%201');
+    });
+
+    it('should add with empty fragment', () => {
+      expect(utils.addFragmentParam(
+          'https://example.com/doc#',
+          'key', 'value 1'))
+          .to.equal('https://example.com/doc#&key=value%201');
+    });
+
+    it('should add with non-empty fragment', () => {
+      expect(utils.addFragmentParam(
+          'https://example.com/doc#a=b',
+          'key', 'value 1'))
+          .to.equal('https://example.com/doc#a=b&key=value%201');
+    });
+  });
+
   describe('removeFragment', () => {
     it('should remove fragment with empty URL', () => {
       expect(utils.removeFragment('')).to.equal('');
