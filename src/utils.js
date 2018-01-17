@@ -107,6 +107,13 @@ export function getQueryParam(queryString, param) {
 }
 
 
+/**
+ * Add a query-like parameter to the fragment string.
+ * @param {string} url
+ * @param {string} param
+ * @param {string} value
+ * @return {string}
+ */
 export function addFragmentParam(url, param, value) {
   return url +
       (url.indexOf('#') == -1 ? '#' : '&') +
