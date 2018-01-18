@@ -195,6 +195,8 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         requestId: 'request1',
         returnUrl: 'https://example-pub.com/opener',
         args: {a: 1},
+        origin: 'https://example-pub.com',
+        originVerified: false,
       };
       connectPromise = host.connect(request);
       return Promise.resolve().then(() => {
@@ -424,103 +426,269 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
         .to.throw(/not connected/);
   });
 
-  it('should connect with request object', () => {
-    const request = {
-      requestId: 'request1',
-      returnUrl: 'https://example.com/opener',
-      args: {a: 1},
-    };
-    expect(() => {
-      host.getTargetOrigin();
-    }).to.throw(/not connected/);
-    expect(() => {
-      host.isTargetOriginVerified();
-    }).to.throw(/not connected/);
-    expect(() => {
-      host.getArgs();
-    }).to.throw(/not connected/);
-    expect(host.connected_).to.be.false;
-    return host.connect(request).then(result => {
-      expect(host.connected_).to.be.true;
-      expect(host.accepted_).to.be.false;
-      expect(result).to.equal(host);
-      expect(host.getTargetOrigin()).to.equal('https://example.com');
-      expect(host.isTargetOriginVerified()).to.be.false;
-      expect(host.isSecureChannel()).to.be.false;
-      expect(host.getArgs()).to.deep.equal({a: 1});
-      expect(host.getRequestString()).to.equal(serializeRequest(request));
-
-      // Disconnect.
-      host.accepted_ = true;
-      host.disconnect();
+  describe('connect with request', () => {
+    it('should connect with request object', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      expect(() => {
+        host.getTargetOrigin();
+      }).to.throw(/not connected/);
+      expect(() => {
+        host.isTargetOriginVerified();
+      }).to.throw(/not connected/);
+      expect(() => {
+        host.getArgs();
+      }).to.throw(/not connected/);
       expect(host.connected_).to.be.false;
-      expect(host.accepted_).to.be.false;
-    });
-  });
+      return host.connect(request).then(result => {
+        expect(host.connected_).to.be.true;
+        expect(host.accepted_).to.be.false;
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getArgs()).to.deep.equal({a: 1});
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
 
-  it('should connect with request string', () => {
-    const request = {
-      requestId: 'request1',
-      returnUrl: 'https://example.com/opener',
-      args: {a: 1},
-    };
-    return host.connect(serializeRequest(request)).then(result => {
-      expect(result).to.equal(host);
-      expect(host.getTargetOrigin()).to.equal('https://example.com');
-      expect(host.isTargetOriginVerified()).to.be.false;
-      expect(host.isSecureChannel()).to.be.false;
-      expect(host.getRequestString()).to.equal(serializeRequest(request));
+        // Disconnect.
+        host.accepted_ = true;
+        host.disconnect();
+        expect(host.connected_).to.be.false;
+        expect(host.accepted_).to.be.false;
+      });
     });
-  });
 
-  it('should connect with request fragment', () => {
-    const request = {
-      requestId: 'request1',
-      returnUrl: 'https://example.com/opener',
-      args: {a: 1},
-    };
-    win.location.hash = '#__WA__=' +
-        encodeURIComponent(serializeRequest(request));
-    return host.connect().then(result => {
-      expect(result).to.equal(host);
-      expect(host.getTargetOrigin()).to.equal('https://example.com');
-      expect(host.isTargetOriginVerified()).to.be.false;
-      expect(host.isSecureChannel()).to.be.false;
-      expect(host.getRequestString()).to.equal(serializeRequest(request));
+    it('should connect with trusted request object', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+        origin: 'https://other.com',
+        originVerified: true,
+      };
+      return host.connect(request).then(() => {
+        expect(host.getTargetOrigin()).to.equal('https://other.com');
+        expect(host.isTargetOriginVerified()).to.be.true;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getArgs()).to.deep.equal({a: 1});
+        expect(host.getRequestString()).to.equal(serializeRequest(request));
+      });
     });
-  });
 
-  it('should connect with null request', () => {
-    const request = {
-      requestId: 'request1',
-      returnUrl: 'https://example.com/opener',
-      args: {a: 1},
-    };
-    win.location.hash = '#__WA__=' +
-        encodeURIComponent(serializeRequest(request));
-    return host.connect(null).then(result => {
-      expect(result).to.equal(host);
-      expect(host.getTargetOrigin()).to.equal('https://example.com');
-      expect(host.isTargetOriginVerified()).to.be.false;
-      expect(host.isSecureChannel()).to.be.false;
-      expect(host.getRequestString()).to.equal(serializeRequest(request));
+    it('should calculate origin properties from referrer', () => {
+      Object.defineProperty(doc, 'referrer', {
+        value: 'https://example.com',
+      });
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      return host.connect(request).then(() => {
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.true;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: true,
+            })));
+      });
     });
-  });
 
-  it('should connect with empty string request', () => {
-    const request = {
-      requestId: 'request1',
-      returnUrl: 'https://example.com/opener',
-      args: {a: 1},
-    };
-    win.location.hash = '#__WA__=' +
-        encodeURIComponent(serializeRequest(request));
-    return host.connect('').then(result => {
-      expect(result).to.equal(host);
-      expect(host.getTargetOrigin()).to.equal('https://example.com');
-      expect(host.isTargetOriginVerified()).to.be.false;
-      expect(host.isSecureChannel()).to.be.false;
-      expect(host.getRequestString()).to.equal(serializeRequest(request));
+    it('should calculate origin properties from wrong referrer', () => {
+      Object.defineProperty(doc, 'referrer', {
+        value: 'https://other.com',
+      });
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      return host.connect(request).then(() => {
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should connect with request string', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      return host.connect(serializeRequest(request)).then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should connect with request string with origin', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+        origin: 'https://other.com',
+        originVerified: true,
+      };
+      return host.connect(serializeRequest(request)).then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://other.com');
+        expect(host.isTargetOriginVerified()).to.be.true;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {})));
+      });
+    });
+
+    it('should calculate origin params from referrer', () => {
+      Object.defineProperty(doc, 'referrer', {
+        value: 'https://example.com',
+      });
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      return host.connect(serializeRequest(request)).then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.true;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: true,
+            })));
+      });
+    });
+
+    it('should calculate origin params from wrong referrer', () => {
+      Object.defineProperty(doc, 'referrer', {
+        value: 'https://other.com',
+      });
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      return host.connect(serializeRequest(request)).then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should connect with request fragment', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect().then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should ignore trusted parameters from the fragment', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+        origin: 'https://other.com',
+        originVerified: true,
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect().then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should connect with null request', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect(null).then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
+    });
+
+    it('should connect with empty string request', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/opener',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect('').then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('https://example.com');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              origin: 'https://example.com',
+              originVerified: false,
+            })));
+      });
     });
   });
 
@@ -534,6 +702,8 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
         requestId: 'request1',
         returnUrl: 'https://example-pub.com/opener',
         args: {a: 1},
+        origin: 'https://example-pub.com',
+        originVerified: false,
       };
       return host.connect(request);
     });

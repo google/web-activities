@@ -28,6 +28,9 @@
   <div id="container">
     <h1>Activity Iframe Host</h1>
 
+    Host params:
+    <pre id="hostParamsEl"></pre>
+
     <button id="result_button">Return result</button>
     <button id="cancel_button">Cancel</button>
     <button id="fail_button">Fail</button>
@@ -51,6 +54,13 @@
     var host;
     activities.hosts.connectHost().then(function(aHost) {
       host = aHost;
+      hostParamsEl.textContent =
+          'Mode: ' + host.getMode() + '\n' +
+          'Origin: ' + host.getTargetOrigin() + '\n' +
+          'Verified: ' + host.isTargetOriginVerified() + '\n' +
+          'Secure: ' + host.isSecureChannel() + '\n' +
+          'Referrer: ' + document.referrer + '\n' +
+          'Args: ' + JSON.stringify(host.getArgs()) + '\n';
       var origin = host.getTargetOrigin();
       var args = host.getArgs();
       if (args.publicationId != 'scenic' || origin != 'http://localhost:8000') {

@@ -25,6 +25,7 @@ import {
 import {Messenger} from './messenger';
 import {
   addFragmentParam,
+  getOriginFromUrl,
   getQueryParam,
   removeFragment,
   removeQueryParam,
@@ -372,11 +373,12 @@ export function discoverRedirectPort(win, fragment, requestId) {
     }
   }
 
-  // TODO(dvoytenko): Use `document.referrer` to verify origin.
   const code = response['code'];
   const data = response['data'];
   const origin = response['origin'];
-  const originVerified = false;
+  const referrerOrigin = win.document.referrer &&
+      getOriginFromUrl(win.document.referrer);
+  const originVerified = origin == referrerOrigin;
   return new ActivityWindowRedirectPort(
       code,
       data,
