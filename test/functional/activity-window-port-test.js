@@ -536,7 +536,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
 
     it('should try to verify the origin from referrer', () => {
       Object.defineProperty(win.document, 'referrer', {
-        value: 'HTTPS://EXAMPLE-SP.COM/host'
+        value: 'HTTPS://EXampLE-SP.COM/host',
       });
       const port = discover({
         requestId: 'request1',
@@ -560,7 +560,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
 
     it('should try to verify the origin from other referrer', () => {
       Object.defineProperty(win.document, 'referrer', {
-        value: 'https://other.com/host'
+        value: 'https://other.com/host',
       });
       const port = discover({
         requestId: 'request1',

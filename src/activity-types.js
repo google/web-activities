@@ -68,7 +68,7 @@ export class ActivityResult {
  *   returnUrl: string,
  *   args: ?Object,
  *   origin: (string|undefined),
- *   originVerified: (string|undefined),
+ *   originVerified: (boolean|undefined),
  * }}
  */
 export let ActivityRequestDef;

@@ -389,7 +389,7 @@ export class ActivityWindowRedirectHost {
       requestId: /** @type {string} */ (this.requestId_),
       returnUrl: /** @type {string} */ (this.returnUrl_),
       args: this.args_,
-      origin: this.targetOrigin_,
+      origin: /** @type {string} */ (this.targetOrigin_),
       originVerified: this.targetOriginVerified_,
     });
   }
