@@ -233,5 +233,38 @@ describe('utils', () => {
       expect(utils.parseRequest(null)).to.be.null;
       expect(utils.parseRequest('')).to.be.null;
     });
+
+    it('should parse request with origin/verified', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/back',
+        args: {a: 1},
+        origin: 'https://other.com',
+        originVerified: true,
+      };
+      const parsedRequest = utils.parseRequest(
+          utils.serializeRequest(request), true);
+      expect(parsedRequest).to.deep.equal(request);
+      expect(parsedRequest.origin).to.equal('https://other.com');
+      expect(parsedRequest.originVerified).to.be.true;
+    });
+
+    it('should parse request with origin/verified but not trusted', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'https://example.com/back',
+        args: {a: 1},
+        origin: 'https://other.com',
+        originVerified: true,
+      };
+      const parsedRequest = utils.parseRequest(
+          utils.serializeRequest(request));
+      expect(parsedRequest).to.not.deep.equal(request);
+      delete request['origin'];
+      delete request['originVerified'];
+      expect(parsedRequest).to.deep.equal(request);
+      expect(parsedRequest.origin).to.be.undefined;
+      expect(parsedRequest.originVerified).to.be.undefined;
+    });
   });
 });

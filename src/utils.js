@@ -155,18 +155,26 @@ export function removeQueryParam(queryString, param) {
 
 /**
  * @param {?string} requestString
+ * @param {boolean=} trusted
  * @return {?ActivityRequestDef}
  */
-export function parseRequest(requestString) {
+export function parseRequest(requestString, trusted = false) {
   if (!requestString) {
     return null;
   }
   const parsed = /** @type {!Object} */ (JSON.parse(requestString));
-  return {
+  const request = {
     requestId: /** @type {string} */ (parsed['requestId']),
     returnUrl: /** @type {string} */ (parsed['returnUrl']),
     args: /** @type {?Object} */ (parsed['args'] || null),
   };
+  if (trusted) {
+    request.origin = /** @type {string|undefined} */ (
+        parsed['origin'] || undefined);
+    request.originVerified = /** @type {boolean|undefined} */ (
+        parsed['originVerified'] || undefined);
+  }
+  return request;
 }
 
 
@@ -175,9 +183,16 @@ export function parseRequest(requestString) {
  * @return {string}
  */
 export function serializeRequest(request) {
-  return JSON.stringify({
+  const map = {
     'requestId': request.requestId,
     'returnUrl': request.returnUrl,
     'args': request.args,
-  });
+  };
+  if (request.origin !== undefined) {
+    map['origin'] = request.origin;
+  }
+  if (request.originVerified !== undefined) {
+    map['originVerified'] = request.originVerified;
+  }
+  return JSON.stringify(map);
 }

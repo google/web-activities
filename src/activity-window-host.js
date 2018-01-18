@@ -320,6 +320,10 @@ export class ActivityWindowRedirectHost {
 
   /**
    * Connects the activity to the client.
+   *
+   * Notice, if `opt_request` parameter is specified, the host explicitly
+   * trusts all fields encoded in this request.
+   *
    * @param {(?ActivityRequestDef|?string)=} opt_request
    * @return {!Promise}
    */
@@ -331,8 +335,11 @@ export class ActivityWindowRedirectHost {
       if (opt_request && typeof opt_request == 'object') {
         request = opt_request;
       } else {
+        let requestTrusted = false;
         let requestString;
         if (opt_request && typeof opt_request == 'string') {
+          // When request is passed as an argument, it's parsed as "trusted".
+          requestTrusted = true;
           requestString = opt_request;
         } else {
           const fragmentRequestParam =
@@ -342,7 +349,7 @@ export class ActivityWindowRedirectHost {
           }
         }
         if (requestString) {
-          request = parseRequest(requestString);
+          request = parseRequest(requestString, requestTrusted);
         }
       }
       if (!request || !request.requestId || !request.returnUrl) {
@@ -351,9 +358,19 @@ export class ActivityWindowRedirectHost {
       this.requestId_ = request.requestId;
       this.args_ = request.args;
       this.returnUrl_ = request.returnUrl;
-      this.targetOrigin_ = getOriginFromUrl(request.returnUrl);
-      // TODO(dvoytenko): Use `document.referrer` to verify origin.
-      this.targetOriginVerified_ = false;
+      if (request.origin) {
+        // Trusted request: trust origin and verified flag explicitly.
+        this.targetOrigin_ = request.origin;
+        this.targetOriginVerified_ = request.originVerified || false;
+      } else {
+        // Otherwise, infer the origin/verified from other parameters.
+        this.targetOrigin_ = getOriginFromUrl(request.returnUrl);
+        // Use referrer to conditionally verify the origin. Notice, that
+        // the channel security will remain "not secure".
+        const referrerOrigin = (this.win_.document.referrer &&
+            getOriginFromUrl(this.win_.document.referrer));
+        this.targetOriginVerified_ = (referrerOrigin == this.targetOrigin_);
+      }
       this.connected_ = true;
       return this;
     });
@@ -372,6 +389,8 @@ export class ActivityWindowRedirectHost {
       requestId: /** @type {string} */ (this.requestId_),
       returnUrl: /** @type {string} */ (this.returnUrl_),
       args: this.args_,
+      origin: this.targetOrigin_,
+      originVerified: this.targetOriginVerified_,
     });
   }
 
