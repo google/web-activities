@@ -108,6 +108,20 @@ export function getQueryParam(queryString, param) {
 
 
 /**
+ * Add a query-like parameter to the fragment string.
+ * @param {string} url
+ * @param {string} param
+ * @param {string} value
+ * @return {string}
+ */
+export function addFragmentParam(url, param, value) {
+  return url +
+      (url.indexOf('#') == -1 ? '#' : '&') +
+      encodeURIComponent(param) + '=' + encodeURIComponent(value);
+}
+
+
+/**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
  * @return {?string}

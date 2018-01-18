@@ -192,6 +192,12 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(getUrl({}, 'https://example-sp.com/popup#abc'))
             .to.contain('https://example-sp.com/popup#abc&__WA__=%7');
       });
+
+      it('should NOT add fragment when skipped', () => {
+        expect(getUrl({skipRequestInUrl: true},
+            'https://example-sp.com/popup'))
+            .to.equal('https://example-sp.com/popup');
+      });
     });
 
     describe('open', () => {

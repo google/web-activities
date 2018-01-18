@@ -24,6 +24,7 @@ import {
 } from './activity-types';
 import {Messenger} from './messenger';
 import {
+  addFragmentParam,
   getQueryParam,
   removeFragment,
   removeQueryParam,
@@ -167,19 +168,20 @@ export class ActivityWindowPort {
   openInternal_() {
     const featuresStr = this.buildFeatures_();
 
-    // Defensively, the URL in all cases will contain the request payload.
-    const returnUrl =
-        this.options_ && this.options_.returnUrl ||
-        removeFragment(this.win_.location.href);
-    const requestString = serializeRequest({
-      requestId: this.requestId_,
-      returnUrl,
-      args: this.args_,
-    });
-    const url =
-        this.url_ +
-        (this.url_.indexOf('#') == -1 ? '#' : '&') +
-        '__WA__=' + encodeURIComponent(requestString);
+    // Defensively, the URL will contain the request payload, unless explicitly
+    // directed not to via `skipRequestInUrl` option.
+    let url = this.url_;
+    if (!(this.options_ && this.options_.skipRequestInUrl)) {
+      const returnUrl =
+          this.options_ && this.options_.returnUrl ||
+          removeFragment(this.win_.location.href);
+      const requestString = serializeRequest({
+        requestId: this.requestId_,
+        returnUrl,
+        args: this.args_,
+      });
+      url = addFragmentParam(url, '__WA__', requestString);
+    }
 
     // Open the window.
     // Try first with the specified target. If we're inside the WKWebView or

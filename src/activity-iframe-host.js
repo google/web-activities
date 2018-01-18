@@ -205,7 +205,12 @@ export class ActivityIframeHost {
    * @private
    */
   sendResult_(code, data) {
-    this.ensureAccepted_();
+    // Only require "accept" for successful return.
+    if (code == ActivityResultCode.OK) {
+      this.ensureAccepted_();
+    } else {
+      this.ensureConnected_();
+    }
     this.messenger_.sendCommand('result', {
       'code': code,
       'data': data,
