@@ -18,7 +18,6 @@
 'use strict';
 
 
-
 /**
  * The result code used for `ActivityResult`.
  * @enum {string}
