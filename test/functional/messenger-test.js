@@ -129,6 +129,62 @@ describes.realWin('Messenger', {}, env => {
       });
       expect(onCommand).to.not.be.called;
     });
+
+    it('should fail sending a message until connected', () => {
+      expect(() => {
+        messenger.customMessage({a: 1});
+      }).to.throw(/not connected/);
+    });
+
+    it('should send a message once connected', () => {
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      messenger.customMessage({a: 1});
+      expect(source.postMessage).to.be.calledOnce;
+      expect(source.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'msg',
+        payload: {a: 1},
+      });
+      expect(source.postMessage.args[0][1]).to.equal('https://example-sp.com');
+    });
+
+    it('should call an inbound custom message', () => {
+      const onMessage = sandbox.spy();
+      messenger.onCustomMessage(onMessage);
+      const handler = addEventListenerSpy.args[0][1];
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'msg', payload: {a: 1}},
+      });
+      expect(onMessage).to.be.calledOnce;
+      expect(onMessage.args[0][0]).to.deep.equal({a: 1});
+    });
+
+    it('should ignore an inbound custom message w/o listener', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      expect(() => {
+        handler({
+          origin: 'https://example-sp.com',
+          data: {sentinel: '__ACTIVITIES__', cmd: 'msg', payload: {a: 1}},
+        });
+      }).to.not.throw();
+      const onMessage = sandbox.spy();
+      messenger.onCustomMessage(onMessage);
+      expect(onMessage).to.not.be.called;
+    });
+
+    it('should ignore an inbound custom message for a wrong origin', () => {
+      const onMessage = sandbox.spy();
+      messenger.onCustomMessage(onMessage);
+      const handler = addEventListenerSpy.args[0][1];
+      handler({
+        origin: 'https://other-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'msg', payload: {a: 1}},
+      });
+      expect(onMessage).to.not.be.called;
+    });
   });
 
 

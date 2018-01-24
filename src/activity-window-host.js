@@ -191,6 +191,18 @@ export class ActivityWindowPopupHost {
   }
 
   /** @override */
+  message() {
+    this.ensureAccepted_();
+    // Not supported for compatibility with redirect mode.
+  }
+
+  /** @override */
+  onMessage() {
+    this.ensureAccepted_();
+    // Not supported for compatibility with redirect mode.
+  }
+
+  /** @override */
   result(data) {
     this.sendResult_(ActivityResultCode.OK, data);
   }
@@ -446,6 +458,18 @@ export class ActivityWindowRedirectHost {
   /** @override */
   resized() {
     setTimeout(() => this.resized_(), 50);
+  }
+
+  /** @override */
+  message() {
+    this.ensureAccepted_();
+    // Not supported. Infeasible.
+  }
+
+  /** @override */
+  onMessage() {
+    this.ensureAccepted_();
+    // Not supported. Infeasible.
   }
 
   /** @override */

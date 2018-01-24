@@ -79,11 +79,13 @@ describes.realWin('ActivityIframePort', {}, env => {
     let connectPromise;
     let onCommand;
     let sendCommandStub;
+    let customMessageStub;
 
     beforeEach(() => {
       connectPromise = port.connect();
       onCommand = messenger.onCommand_;
       sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+      customMessageStub = sandbox.stub(messenger, 'customMessage');
     });
 
     afterEach(() => {
@@ -188,6 +190,20 @@ describes.realWin('ActivityIframePort', {}, env => {
     it('should ignore "resized" before connected', () => {
       port.resized();
       expect(sendCommandStub).to.not.be.called;
+    });
+
+    it('should send custom message', () => {
+      port.message({a: 1});
+      expect(customMessageStub).to.be.calledOnce;
+      expect(customMessageStub).to.be.calledWith({a: 1});
+    });
+
+    it('should receive custom message', () => {
+      const spy = sandbox.spy();
+      port.onMessage(spy);
+      messenger.handleCommand_('msg', {a: 1});
+      expect(spy).to.be.calledOnce;
+      expect(spy).to.be.calledWith({a: 1});
     });
   });
 });

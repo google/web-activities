@@ -91,6 +91,13 @@
             HOST_URL,
             ARGS);
       }).then(function(port) {
+        port.onMessage(function(payload) {
+          printResult({
+            what: 'message',
+            payload: payload,
+          });
+        });
+        port.message({from: 'client'});
         port.onResizeRequest(function(height) {
           var allowed = Math.min(height, MAX_IFRAME_HEIGHT);
           iframe.style.height = allowed + 'px';

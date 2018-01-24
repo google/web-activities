@@ -237,6 +237,20 @@ export class ActivityHostDef {
   ready() {}
 
   /**
+   * Sends a message to the client. Notice that only iframe hosts can send and
+   * receive messages.
+   * @param {!Object} unusedPayload
+   */
+  message(unusedPayload) {}
+
+  /**
+   * Registers a callback to receive messages from the client. Notice that only
+   * iframe hosts can send and receive messages.
+   * @param {function(!Object)} unusedCallback
+   */
+  onMessage(unusedCallback) {}
+
+  /**
    * Signals to the activity client the result of the activity.
    * @param {*} unusedData
    */
