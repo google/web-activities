@@ -371,6 +371,23 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
           /* requestedHeight */ requestedHeight,
           /* overfow */ true);
     });
+
+    it('should NOT allow messaging before accept', () => {
+      expect(() => host.message({a: 1}))
+          .to.throw(/not accepted/);
+      expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+    });
+
+    it('should ignore custom message', () => {
+      host.accept();
+      expect(() => {
+        host.message({a: 1});
+      }).to.not.throw();
+      expect(() => {
+        host.onMessage(function() {});
+      }).to.not.throw();
+    });
   });
 });
 
@@ -830,6 +847,23 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
           /* allowedHeight */ availableHeight,
           /* requestedHeight */ requestedHeight,
           /* overfow */ true);
+    });
+
+    it('should NOT allow messaging before accept', () => {
+      expect(() => host.message({a: 1}))
+          .to.throw(/not accepted/);
+      expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+    });
+
+    it('should ignore custom message', () => {
+      host.accept();
+      expect(() => {
+        host.message({a: 1});
+      }).to.not.throw();
+      expect(() => {
+        host.onMessage(function() {});
+      }).to.not.throw();
     });
   });
 });

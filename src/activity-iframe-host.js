@@ -171,6 +171,18 @@ export class ActivityIframeHost {
   }
 
   /** @override */
+  message(payload) {
+    this.ensureAccepted_();
+    this.messenger_.customMessage(payload);
+  }
+
+  /** @override */
+  onMessage(callback) {
+    this.ensureAccepted_();
+    this.messenger_.onCustomMessage(callback);
+  }
+
+  /** @override */
   result(data) {
     this.sendResult_(ActivityResultCode.OK, data);
   }

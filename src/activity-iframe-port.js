@@ -140,6 +140,22 @@ export class ActivityIframePort {
   }
 
   /**
+   * Sends a message to the host.
+   * @param {!Object} payload
+   */
+  message(payload) {
+    this.messenger_.customMessage(payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the host.
+   * @param {function(!Object)} callback
+   */
+  onMessage(callback) {
+    this.messenger_.onCustomMessage(callback);
+  }
+
+  /**
    * Returns a promise that yields when the iframe is ready to be interacted
    * with.
    * @return {!Promise}

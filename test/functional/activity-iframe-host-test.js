@@ -99,12 +99,15 @@ describes.realWin('ActivityIframeHost', {}, env => {
         .to.throw(/not connected/);
     expect(() => host.failed(new Error('intentional')))
         .to.throw(/not connected/);
+    expect(() => host.message({a: 1}))
+        .to.throw(/not connected|not accepted/);
   });
 
   describe('commands', () => {
     let connectPromise;
     let onEvent;
     let sendCommandStub;
+    let customMessageStub;
     let clock;
     let addEventListenerSpy, removeEventListenerSpy;
 
@@ -113,6 +116,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
       connectPromise = host.connect();
       onEvent = messenger.handleEvent_.bind(messenger);
       sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+      customMessageStub = sandbox.stub(messenger, 'customMessage');
       onCommand('start', {a: 1});
     });
 
@@ -331,6 +335,29 @@ describes.realWin('ActivityIframeHost', {}, env => {
         expect(sendCommandStub).to.be.calledOnce;
         expect(sendCommandStub).to.be.calledWith('resize', {height: 111});
       });
+    });
+
+    it('should NOT allow messaging before accept', () => {
+      expect(() => host.message({a: 1}))
+          .to.throw(/not accepted/);
+      expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+    });
+
+    it('should send custom message', () => {
+      host.accept();
+      host.message({a: 1});
+      expect(customMessageStub).to.be.calledOnce;
+      expect(customMessageStub).to.be.calledWith({a: 1});
+    });
+
+    it('should receive custom message', () => {
+      host.accept();
+      const spy = sandbox.spy();
+      host.onMessage(spy);
+      messenger.handleCommand_('msg', {a: 1});
+      expect(spy).to.be.calledOnce;
+      expect(spy).to.be.calledWith({a: 1});
     });
   });
 });

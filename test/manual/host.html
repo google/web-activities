@@ -72,6 +72,10 @@
       console.log('Accept: ', origin, host.isTargetOriginVerified(), args);
       host.accept();
     }).then(function() {
+      host.onMessage(function(payload) {
+        hostParamsEl.textContent += '\nMSG: ' + JSON.stringify(payload);
+      });
+      host.message({from: 'server'});
       host.setSizeContainer(container);
       host.onResizeComplete(function(height, requestedHeight, overflow) {
         document.body.classList.toggle('overflow', overflow);

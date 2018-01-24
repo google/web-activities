@@ -46,6 +46,9 @@ export class Messenger {
     /** @private {?function(string, ?Object)} */
     this.onCommand_ = null;
 
+    /** @private {?function(!Object)} */
+    this.onCustomMessage_ = null;
+
     /** @private @const */
     this.boundHandleEvent_ = this.handleEvent_.bind(this);
   }
@@ -132,6 +135,22 @@ export class Messenger {
   }
 
   /**
+   * Sends a message to the client.
+   * @param {!Object} payload
+   */
+  customMessage(payload) {
+    this.sendCommand('msg', payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the client.
+   * @param {function(!Object)} callback
+   */
+  onCustomMessage(callback) {
+    this.onCustomMessage_ = callback;
+  }
+
+  /**
    * @param {!MessageEvent} event
    * @private
    */
@@ -156,6 +175,21 @@ export class Messenger {
     if (origin != this.targetOrigin_) {
       return;
     }
-    this.onCommand_(cmd, payload);
+    this.handleCommand_(cmd, payload);
+  }
+
+  /**
+   * @param {string} cmd
+   * @param {?Object} payload
+   * @private
+   */
+  handleCommand_(cmd, payload) {
+    if (cmd == 'msg') {
+      if (this.onCustomMessage_ != null && payload != null) {
+        this.onCustomMessage_(payload);
+      }
+    } else {
+      this.onCommand_(cmd, payload);
+    }
   }
 }
