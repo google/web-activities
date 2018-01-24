@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 0.4.0 */
+ /** Version: 0.5.0 */
 'use strict';
 
 
@@ -70,6 +70,8 @@ class ActivityResult {
  *   requestId: string,
  *   returnUrl: string,
  *   args: ?Object,
+ *   origin: (string|undefined),
+ *   originVerified: (boolean|undefined),
  * }}
  */
 
@@ -77,8 +79,17 @@ class ActivityResult {
 
 /**
  * The activity "open" options used for popups and redirects.
+ *
+ * - returnUrl: override the return URL. By default, the current URL will be
+ *   used.
+ * - skipRequestInUrl: removes the activity request from the URL, in case
+ *   redirect is used. By default, the activity request is appended to the
+ *   activity URL. This option can be used if the activity request is passed
+ *   to the activity by some alternative means.
+ *
  * @typedef {{
  *   returnUrl: (string|undefined),
+ *   skipRequestInUrl: (boolean|undefined),
  *   width: (number|undefined),
  *   height: (number|undefined),
  * }}
@@ -190,6 +201,9 @@ class Messenger {
     /** @private {?function(string, ?Object)} */
     this.onCommand_ = null;
 
+    /** @private {?function(!Object)} */
+    this.onCustomMessage_ = null;
+
     /** @private @const */
     this.boundHandleEvent_ = this.handleEvent_.bind(this);
   }
@@ -276,6 +290,22 @@ class Messenger {
   }
 
   /**
+   * Sends a message to the client.
+   * @param {!Object} payload
+   */
+  customMessage(payload) {
+    this.sendCommand('msg', payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the client.
+   * @param {function(!Object)} callback
+   */
+  onCustomMessage(callback) {
+    this.onCustomMessage_ = callback;
+  }
+
+  /**
    * @param {!MessageEvent} event
    * @private
    */
@@ -300,7 +330,22 @@ class Messenger {
     if (origin != this.targetOrigin_) {
       return;
     }
-    this.onCommand_(cmd, payload);
+    this.handleCommand_(cmd, payload);
+  }
+
+  /**
+   * @param {string} cmd
+   * @param {?Object} payload
+   * @private
+   */
+  handleCommand_(cmd, payload) {
+    if (cmd == 'msg') {
+      if (this.onCustomMessage_ != null && payload != null) {
+        this.onCustomMessage_(payload);
+      }
+    } else {
+      this.onCommand_(cmd, payload);
+    }
   }
 }
 
@@ -395,6 +440,20 @@ function getQueryParam(queryString, param) {
 
 
 /**
+ * Add a query-like parameter to the fragment string.
+ * @param {string} url
+ * @param {string} param
+ * @param {string} value
+ * @return {string}
+ */
+function addFragmentParam(url, param, value) {
+  return url +
+      (url.indexOf('#') == -1 ? '#' : '&') +
+      encodeURIComponent(param) + '=' + encodeURIComponent(value);
+}
+
+
+/**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
  * @return {?string}
@@ -428,6 +487,7 @@ function removeQueryParam(queryString, param) {
 
 /**
  * @param {?string} requestString
+ * @param {boolean=} trusted
  * @return {?ActivityRequest}
  */
 
@@ -438,11 +498,18 @@ function removeQueryParam(queryString, param) {
  * @return {string}
  */
 function serializeRequest(request) {
-  return JSON.stringify({
+  const map = {
     'requestId': request.requestId,
     'returnUrl': request.returnUrl,
     'args': request.args,
-  });
+  };
+  if (request.origin !== undefined) {
+    map['origin'] = request.origin;
+  }
+  if (request.originVerified !== undefined) {
+    map['originVerified'] = request.originVerified;
+  }
+  return JSON.stringify(map);
 }
 
 
@@ -559,6 +626,22 @@ class ActivityIframePort {
   /** @override */
   acceptResult() {
     return this.resultPromise_;
+  }
+
+  /**
+   * Sends a message to the host.
+   * @param {!Object} payload
+   */
+  message(payload) {
+    this.messenger_.customMessage(payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the host.
+   * @param {function(!Object)} callback
+   */
+  onMessage(callback) {
+    this.messenger_.onCustomMessage(callback);
   }
 
   /**
@@ -778,19 +861,20 @@ class ActivityWindowPort {
   openInternal_() {
     const featuresStr = this.buildFeatures_();
 
-    // ensively, the URL in all cases will contain the request payload.
-    const returnUrl =
-        this.options_ && this.options_.returnUrl ||
-        removeFragment(this.win_.location.href);
-    const requestString = serializeRequest({
-      requestId: this.requestId_,
-      returnUrl,
-      args: this.args_,
-    });
-    const url =
-        this.url_ +
-        (this.url_.indexOf('#') == -1 ? '#' : '&') +
-        '__WA__=' + encodeURIComponent(requestString);
+    // ensively, the URL will contain the request payload, unless explicitly
+    // directed not to via `skipRequestInUrl` option.
+    let url = this.url_;
+    if (!(this.options_ && this.options_.skipRequestInUrl)) {
+      const returnUrl =
+          this.options_ && this.options_.returnUrl ||
+          removeFragment(this.win_.location.href);
+      const requestString = serializeRequest({
+        requestId: this.requestId_,
+        returnUrl,
+        args: this.args_,
+      });
+      url = addFragmentParam(url, '__WA__', requestString);
+    }
 
     // Open the window.
     // Try first with the specified target. If we're inside the WKWebView or
@@ -981,11 +1065,12 @@ function discoverRedirectPort(win, fragment, requestId) {
     }
   }
 
-  // TODO(dvoytenko): Use `document.referrer` to verify origin.
   const code = response['code'];
   const data = response['data'];
   const origin = response['origin'];
-  const originVerified = false;
+  const referrerOrigin = win.document.referrer &&
+      getOriginFromUrl(win.document.referrer);
+  const originVerified = origin == referrerOrigin;
   return new ActivityWindowRedirectPort(
       code,
       data,
@@ -1064,7 +1149,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '0.4.0';
+    this.version = '0.5.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
