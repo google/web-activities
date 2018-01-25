@@ -34,7 +34,7 @@ import {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPortDef}
@@ -169,7 +169,7 @@ export class ActivityWindowPort {
   openInternal_() {
     const featuresStr = this.buildFeatures_();
 
-    // Defensively, the URL will contain the request payload, unless explicitly
+    // Protectively, the URL will contain the request payload, unless explicitly
     // directed not to via `skipRequestInUrl` option.
     let url = this.url_;
     if (!(this.options_ && this.options_.skipRequestInUrl)) {
@@ -388,7 +388,7 @@ export function discoverRedirectPort(win, fragment, requestId) {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPortDef}

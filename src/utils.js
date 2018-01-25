@@ -100,6 +100,7 @@ function parseQueryString(query) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to get from the query string.
  * @return {?string}
  */
 export function getQueryParam(queryString, param) {
@@ -124,6 +125,7 @@ export function addFragmentParam(url, param, value) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to remove from the query string.
  * @return {?string}
  */
 export function removeQueryParam(queryString, param) {
