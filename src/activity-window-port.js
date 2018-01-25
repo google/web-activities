@@ -34,7 +34,7 @@ import {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPortDef}
@@ -388,7 +388,7 @@ export function discoverRedirectPort(win, fragment, requestId) {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPortDef}
