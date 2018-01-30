@@ -341,7 +341,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       });
 
       it('should not allow target origin until connected', () => {
-        expect(() => port.getTargetOrigin())
+        expect(() => port.messenger_.getTargetOrigin())
             .to.throw(/not connected/);
       });
 
@@ -359,19 +359,19 @@ describes.realWin('ActivityWindowPort', {}, env => {
         flushTimeouts();
         expect(heartbeatFunc).to.exist;
         expect(port.heartbeatInterval_).to.exist;
-        expect(port.resultReject_).to.exist;
+        expect(port.resultResolver_).to.exist;
 
         popup.closed = true;
         heartbeatFunc();
         expect(heartbeatFunc).to.be.null;
         expect(port.heartbeatInterval_).to.be.null;
-        expect(port.resultReject_).to.exist;
+        expect(port.resultResolver_).to.exist;
 
         // Timeout is important to give activity a chance to message data back.
         flushTimeouts();
         expect(heartbeatFunc).to.be.null;
         expect(port.heartbeatInterval_).to.be.null;
-        expect(port.resultReject_).to.be.null;
+        expect(port.resultResolver_).to.be.null;
         return expect(port.acceptResult()).to.be.eventually.rejected;
       });
 
@@ -397,9 +397,8 @@ describes.realWin('ActivityWindowPort', {}, env => {
         });
 
         it('should resolve target properties', () => {
-          expect(port.getTargetOrigin()).to.equal('https://example-sp.com');
-          expect(port.isTargetOriginVerified()).to.be.true;
-          expect(port.isSecureChannel()).to.be.true;
+          expect(port.messenger_.getTargetOrigin())
+              .to.equal('https://example-sp.com');
         });
 
         it('should execute heartbeat when window is open/closed', () => {
@@ -408,20 +407,26 @@ describes.realWin('ActivityWindowPort', {}, env => {
           flushTimeouts();
           expect(heartbeatFunc).to.exist;
           expect(port.heartbeatInterval_).to.exist;
-          expect(port.resultReject_).to.exist;
+          expect(port.resultResolver_).to.exist;
 
           popup.closed = true;
           heartbeatFunc();
           expect(heartbeatFunc).to.be.null;
           expect(port.heartbeatInterval_).to.be.null;
-          expect(port.resultReject_).to.exist;
+          expect(port.resultResolver_).to.exist;
 
           // Timeout is important to give activity a chance to message data back.
           flushTimeouts();
           expect(heartbeatFunc).to.be.null;
           expect(port.heartbeatInterval_).to.be.null;
-          expect(port.resultReject_).to.be.null;
-          return port.acceptResult().then(result => {
+          expect(port.resultResolver_).to.be.null;
+          return port.acceptResult().then(() => {
+            throw new Error('must have failed');
+          }, reason => {
+            expect(reason).to.be.instanceof(DOMException);
+            expect(reason.code).to.equal(20);
+            expect(reason.name).to.equal('AbortError');
+            const result = reason.activityResult;
             expect(result.code).to.equal(ActivityResultCode.CANCELED);
           });
         });
@@ -449,7 +454,13 @@ describes.realWin('ActivityWindowPort', {}, env => {
         it('should handle cancel "result"', () => {
           onCommand('result', {code: 'canceled', data: null});
           expect(sendCommandStub).to.be.calledWith('close');
-          return port.acceptResult().then(result => {
+          return port.acceptResult().then(() => {
+            throw new Error('must have failed');
+          }, reason => {
+            expect(reason).to.be.instanceof(DOMException);
+            expect(reason.code).to.equal(20);
+            expect(reason.name).to.equal('AbortError');
+            const result = reason.activityResult;
             expect(result.ok).to.be.false;
             expect(result.code).to.equal(ActivityResultCode.CANCELED);
             expect(result.data).to.be.null;
@@ -463,7 +474,11 @@ describes.realWin('ActivityWindowPort', {}, env => {
         it('should handle failed "result"', () => {
           onCommand('result', {code: 'failed', data: 'broken'});
           expect(sendCommandStub).to.be.calledWith('close');
-          return port.acceptResult().then(result => {
+          return port.acceptResult().then(() => {
+            throw new Error('must have failed');
+          }, reason => {
+            expect(() => {throw reason;}).to.throw(/broken/);
+            const result = reason.activityResult;
             expect(result.ok).to.be.false;
             expect(result.code).to.equal(ActivityResultCode.FAILED);
             expect(result.error).to.be.instanceof(Error);
@@ -520,9 +535,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       }, 'request1');
       expect(port).to.exist;
       expect(port.getMode()).to.equal(ActivityMode.REDIRECT);
-      expect(port.getTargetOrigin()).to.equal('https://example-sp.com');
-      expect(port.isTargetOriginVerified()).to.be.false;
-      expect(port.isSecureChannel()).to.be.false;
+      expect(port.targetOrigin_).to.equal('https://example-sp.com');
       return port.acceptResult().then(result => {
         expect(result.ok).to.be.true;
         expect(result.code).to.equal(ActivityResultCode.OK);
@@ -546,9 +559,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       }, 'request1');
       expect(port).to.exist;
       expect(port.getMode()).to.equal(ActivityMode.REDIRECT);
-      expect(port.getTargetOrigin()).to.equal('https://example-sp.com');
-      expect(port.isTargetOriginVerified()).to.be.true;
-      expect(port.isSecureChannel()).to.be.false;
+      expect(port.targetOrigin_).to.equal('https://example-sp.com');
       return port.acceptResult().then(result => {
         expect(result.ok).to.be.true;
         expect(result.data).to.deep.equal({a: 1});
@@ -570,9 +581,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       }, 'request1');
       expect(port).to.exist;
       expect(port.getMode()).to.equal(ActivityMode.REDIRECT);
-      expect(port.getTargetOrigin()).to.equal('https://example-sp.com');
-      expect(port.isTargetOriginVerified()).to.be.false;
-      expect(port.isSecureChannel()).to.be.false;
+      expect(port.targetOrigin_).to.equal('https://example-sp.com');
       return port.acceptResult().then(result => {
         expect(result.ok).to.be.true;
         expect(result.data).to.deep.equal({a: 1});

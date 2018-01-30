@@ -17,6 +17,12 @@
 
 import {ActivityRequestDef} from './activity-types';
 
+/** DOMException.ABORT_ERR name */
+const ABORT_ERR_NAME = 'AbortError';
+
+/** DOMException.ABORT_ERR = 20 */
+const ABORT_ERR_CODE = 20;
+
 /** @type {?HTMLAnchorElement} */
 let aResolver;
 
@@ -197,4 +203,45 @@ export function serializeRequest(request) {
     map['originVerified'] = request.originVerified;
   }
   return JSON.stringify(map);
+}
+
+
+/**
+ * @param {!Window} win
+ * @param {string=} opt_message
+ * @return {!DOMException}
+ */
+export function createAbortError(win, opt_message) {
+  const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
+  let error;
+  if ('DOMException' in win) {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string, string)} */ (
+        DOMException);
+    error = new constr(message, ABORT_ERR_NAME);
+  } else {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string)} */ (
+        Error);
+    error = new constr(message);
+    error.name = ABORT_ERR_NAME;
+    error.code = ABORT_ERR_CODE;
+  }
+  return error;
+}
+
+
+/**
+ * @param {!Window} win
+ * @param {!./activity-types.ActivityResult} result
+ * @param {function((!./activity-types.ActivityResult|!Promise))} resolver
+ */
+export function resolveResult(win, result, resolver) {
+  if (result.ok) {
+    resolver(result);
+  } else {
+    const error = result.error || createAbortError(win);
+    error.activityResult = result;
+    resolver(Promise.reject(error));
+  }
 }

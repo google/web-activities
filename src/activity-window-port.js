@@ -29,6 +29,7 @@ import {
   getQueryParam,
   removeFragment,
   removeQueryParam,
+  resolveResult,
   serializeRequest,
 } from './utils';
 
@@ -71,16 +72,12 @@ export class ActivityWindowPort {
     /** @private @const {?ActivityOpenOptionsDef} */
     this.options_ = opt_options || null;
 
-    /** @private {?function(!ActivityResult)} */
+    /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
 
-    /** @private {?function(!Error)} */
-    this.resultReject_ = null;
-
     /** @private @const {!Promise<!ActivityResult>} */
-    this.resultPromise_ = new Promise((resolve, reject) => {
+    this.resultPromise_ = new Promise(resolve => {
       this.resultResolver_ = resolve;
-      this.resultReject_ = reject;
     });
 
     /** @private {?Window} */
@@ -134,22 +131,6 @@ export class ActivityWindowPort {
       this.targetWin_ = null;
     }
     this.resultResolver_ = null;
-    this.resultReject_ = null;
-  }
-
-  /** @override */
-  getTargetOrigin() {
-    return this.messenger_.getTargetOrigin();
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return true;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return true;
   }
 
   /** @override */
@@ -292,8 +273,8 @@ export class ActivityWindowPort {
    * @private
    */
   disconnectWithError_(reason) {
-    if (this.resultReject_) {
-      this.resultReject_(reason);
+    if (this.resultResolver_) {
+      this.resultResolver_(Promise.reject(reason));
     }
     this.disconnect();
   }
@@ -305,14 +286,15 @@ export class ActivityWindowPort {
    */
   result_(code, data) {
     if (this.resultResolver_) {
-      this.resultResolver_(new ActivityResult(
+      const result = new ActivityResult(
           code,
           data,
-          this.getTargetOrigin(),
-          this.isTargetOriginVerified(),
-          this.isSecureChannel()));
+          ActivityMode.POPUP,
+          this.messenger_.getTargetOrigin(),
+          /* originVerified */ true,
+          /* secureChannel */ true);
+      resolveResult(this.win_, result, this.resultResolver_);
       this.resultResolver_ = null;
-      this.resultReject_ = null;
     }
     if (this.messenger_) {
       this.messenger_.sendCommand('close');
@@ -380,6 +362,7 @@ export function discoverRedirectPort(win, fragment, requestId) {
       getOriginFromUrl(win.document.referrer);
   const originVerified = origin == referrerOrigin;
   return new ActivityWindowRedirectPort(
+      win,
       code,
       data,
       origin,
@@ -396,12 +379,15 @@ export function discoverRedirectPort(win, fragment, requestId) {
 class ActivityWindowRedirectPort {
 
   /**
+   * @param {!Window} win
    * @param {!ActivityResultCode} code
    * @param {*} data
    * @param {string} targetOrigin
    * @param {boolean} targetOriginVerified
    */
-  constructor(code, data, targetOrigin, targetOriginVerified) {
+  constructor(win, code, data, targetOrigin, targetOriginVerified) {
+    /** @private @const {!Window} */
+    this.win_ = win;
     /** @private @const {!ActivityResultCode} */
     this.code_ = code;
     /** @private @const {*} */
@@ -418,27 +404,16 @@ class ActivityWindowRedirectPort {
   }
 
   /** @override */
-  getTargetOrigin() {
-    return this.targetOrigin_;
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return this.targetOriginVerified_;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return false;
-  }
-
-  /** @override */
   acceptResult() {
-    return Promise.resolve(new ActivityResult(
+    const result = new ActivityResult(
         this.code_,
         this.data_,
+        ActivityMode.REDIRECT,
         this.targetOrigin_,
         this.targetOriginVerified_,
-        this.isSecureChannel()));
+        /* secureChannel */ false);
+    return new Promise(resolve => {
+      resolveResult(this.win_, result, resolve);
+    });
   }
 }

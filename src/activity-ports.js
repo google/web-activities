@@ -119,14 +119,14 @@ export class ActivityPorts {
    * A typical implementation would look like:
    * ```
    * ports.onResult('request1', function(port) {
-   *   // Only verified origins are allowed.
-   *   if (port.getTargetOrigin() == expectedOrigin &&
-   *       port.isTargetOriginVerified() &&
-   *       port.isSecureChannel()) {
-   *     port.acceptResult().then(function(result) {
+   *   port.acceptResult().then(function(result) {
+   *     // Only verified origins are allowed.
+   *     if (result.origin == expectedOrigin &&
+   *         result.originVerified &&
+   *         result.secureChannel) {
    *       handleResultForRequest1(result);
-   *     });
-   *   }
+   *     }
+   *   });
    * })
    *
    * ports.open('request1', request1Url, '_blank');

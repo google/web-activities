@@ -31,8 +31,8 @@ To open the activity as a standalone page (popup or redirect):
 // First setup callback, even if you are not yet starting an activity. This
 // will ensure that you are always prepared to handle redirect results.
 ports.onResult(resultId, port => {
-  // Check origin properties.
   port.acceptResult().then(result => {
+    // Check origin properties.
     // Handle the result.
   });
 });
