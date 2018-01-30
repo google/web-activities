@@ -534,8 +534,8 @@ function createAbortError(win, opt_message) {
  *  - `FAILED` result is rejected with the embedded error.
  *
  * @param {!Window} win
- * @param {!./activity-types.ActivityResult} result
- * @param {function((!./activity-types.ActivityResult|!Promise))} resolver
+ * @param {!ActivityResult} result
+ * @param {function((!ActivityResult|!Promise))} resolver
  */
 function resolveResult(win, result, resolver) {
   if (result.ok) {
