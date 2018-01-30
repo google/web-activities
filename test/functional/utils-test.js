@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import {ActivityResult, ActivityResultCode} from '../../src/activity-types';
 import * as utils from '../../src/utils';
 
 
@@ -265,6 +266,61 @@ describe('utils', () => {
       expect(parsedRequest).to.deep.equal(request);
       expect(parsedRequest.origin).to.be.undefined;
       expect(parsedRequest.originVerified).to.be.undefined;
+    });
+  });
+
+  describe('createAbortError', () => {
+    it('should create AbortError when supported', () => {
+      const error = utils.createAbortError(window);
+      expect(() => {throw error;}).to.throw(/AbortError/);
+      expect(error).to.be.instanceof(DOMException);
+      expect(error.code).to.equal(20);  // ABORT_ERR
+      expect(error.name).to.equal('AbortError');
+    });
+
+    it('should emulate AbortError when not supported', () => {
+      const error = utils.createAbortError({});
+      expect(() => {throw error;}).to.throw(/AbortError/);
+      expect(error).to.not.be.instanceof(DOMException);
+      expect(error).to.be.instanceof(Error);
+      expect(error.code).to.equal(20);  // ABORT_ERR
+      expect(error.name).to.equal('AbortError');
+    });
+  });
+
+  describe('resolveResult', () => {
+    function resolveResult(result) {
+      return new Promise(resolve => {
+        utils.resolveResult(window, result, resolve);
+      });
+    }
+
+    it('should resolve OK', () => {
+      const result = new ActivityResult(ActivityResultCode.OK, 'A');
+      return resolveResult(result).then(result => {
+        expect(result).to.equal(result);
+      });
+    });
+
+    it('should resolve CANCEL', () => {
+      const result = new ActivityResult(ActivityResultCode.CANCELED);
+      return resolveResult(result).then(() => {
+        throw new Error('must have failed');
+      }, reason => {
+        expect(reason.code).to.equal(20);  // ABORT_ERR
+        expect(reason.activityResult).to.equal(result);
+      });
+    });
+
+    it('should resolve FAILED', () => {
+      const result = new ActivityResult(ActivityResultCode.FAILED, 'broken');
+      return resolveResult(result).then(() => {
+        throw new Error('must have failed');
+      }, reason => {
+        expect(() => {throw reason;}).to.throw(/broken/);
+        expect(reason.code).to.be.undefined;
+        expect(reason.activityResult).to.equal(result);
+      });
     });
   });
 });

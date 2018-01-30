@@ -207,6 +207,8 @@ export function serializeRequest(request) {
 
 
 /**
+ * Creates or emulates a DOMException of AbortError type.
+ * See https://heycam.github.io/webidl/#aborterror.
  * @param {!Window} win
  * @param {string=} opt_message
  * @return {!DOMException}
@@ -232,6 +234,11 @@ export function createAbortError(win, opt_message) {
 
 
 /**
+ * Resolves the activity result as a promise:
+ *  - `OK` result is yielded as the promise's payload;
+ *  - `CANCEL` result is rejected with the `AbortError`;
+ *  - `FAILED` result is rejected with the embedded error.
+ *
  * @param {!Window} win
  * @param {!./activity-types.ActivityResult} result
  * @param {function((!./activity-types.ActivityResult|!Promise))} resolver
