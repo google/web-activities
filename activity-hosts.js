@@ -14,9 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 0.6.0 */
+ /** Version: 1.0.0 */
 'use strict';
 
+
+
+/**
+ * @enum {string}
+ */
+const ActivityMode = {
+  IFRAME: 'iframe',
+  POPUP: 'popup',
+  REDIRECT: 'redirect',
+};
 
 
 /**
@@ -39,15 +49,18 @@ class ActivityResult {
   /**
    * @param {!ActivityResultCode} code
    * @param {*} data
+   * @param {!ActivityMode} mode
    * @param {string} origin
    * @param {boolean} originVerified
    * @param {boolean} secureChannel
    */
-  constructor(code, data, origin, originVerified, secureChannel) {
+  constructor(code, data, mode, origin, originVerified, secureChannel) {
     /** @const {!ActivityResultCode} */
     this.code = code;
     /** @const {*} */
     this.data = code == ActivityResultCode.OK ? data : null;
+    /** @const {!ActivityMode} */
+    this.mode = mode;
     /** @const {string} */
     this.origin = origin;
     /** @const {boolean} */
@@ -95,16 +108,6 @@ let ActivityRequest;
  * }}
  */
 
-
-
-/**
- * @enum {string}
- */
-const ActivityMode = {
-  IFRAME: 'iframe',
-  POPUP: 'popup',
-  REDIRECT: 'redirect',
-};
 
 
 /**
@@ -773,6 +776,7 @@ function parseQueryString(query) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to get from the query string.
  * @return {?string}
  */
 function getQueryParam(queryString, param) {
@@ -793,6 +797,7 @@ function getQueryParam(queryString, param) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to remove from the query string.
  * @return {?string}
  */
 
@@ -841,6 +846,28 @@ function serializeRequest(request) {
   }
   return JSON.stringify(map);
 }
+
+
+/**
+ * Creates or emulates a DOMException of AbortError type.
+ * See https://heycam.github.io/webidl/#aborterror.
+ * @param {!Window} win
+ * @param {string=} opt_message
+ * @return {!DOMException}
+ */
+
+
+
+/**
+ * Resolves the activity result as a promise:
+ *  - `OK` result is yielded as the promise's payload;
+ *  - `CANCEL` result is rejected with the `AbortError`;
+ *  - `FAILED` result is rejected with the embedded error.
+ *
+ * @param {!Window} win
+ * @param {!./activity-types.ActivityResult} result
+ * @param {function((!./activity-types.ActivityResult|!Promise))} resolver
+ */
 
 
 
@@ -1380,7 +1407,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '0.6.0';
+    this.version = '1.0.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
