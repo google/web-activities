@@ -17,6 +17,16 @@
 
 
 /**
+ * @enum {string}
+ */
+export const ActivityMode = {
+  IFRAME: 'iframe',
+  POPUP: 'popup',
+  REDIRECT: 'redirect',
+};
+
+
+/**
  * The result code used for `ActivityResult`.
  * @enum {string}
  */
@@ -36,15 +46,18 @@ export class ActivityResult {
   /**
    * @param {!ActivityResultCode} code
    * @param {*} data
+   * @param {!ActivityMode} mode
    * @param {string} origin
    * @param {boolean} originVerified
    * @param {boolean} secureChannel
    */
-  constructor(code, data, origin, originVerified, secureChannel) {
+  constructor(code, data, mode, origin, originVerified, secureChannel) {
     /** @const {!ActivityResultCode} */
     this.code = code;
     /** @const {*} */
     this.data = code == ActivityResultCode.OK ? data : null;
+    /** @const {!ActivityMode} */
+    this.mode = mode;
     /** @const {string} */
     this.origin = origin;
     /** @const {boolean} */
@@ -95,16 +108,6 @@ export let ActivityOpenOptionsDef;
 
 
 /**
- * @enum {string}
- */
-export const ActivityMode = {
-  IFRAME: 'iframe',
-  POPUP: 'popup',
-  REDIRECT: 'redirect',
-};
-
-
-/**
  * Activity client-side binding. The port provides limited ways to communicate
  * with the activity and receive signals and results from it. Not every type
  * of activity exposes a port.
@@ -118,30 +121,6 @@ export class ActivityPortDef {
    * @return {!ActivityMode}
    */
   getMode() {}
-
-  /**
-   * The client's origin. The connection to the client must first succeed
-   * before the origin can be known with certainty.
-   * @return {string}
-   */
-  getTargetOrigin() {}
-
-  /**
-   * Whether the client's origin has been verified. This depends on the type of
-   * the client connection. When window messaging is used (for iframes and
-   * popups), the origin can be verified. In case of redirects, where state is
-   * passed in the URL, the verification is not fully possible.
-   * @return {boolean}
-   */
-  isTargetOriginVerified() {}
-
-  /**
-   * Whether the client/host communication is done via a secure channel such
-   * as messaging, or an open and easily exploitable channel, such redirect URL.
-   * Iframes and popups use a secure channel, and the redirect mode does not.
-   * @return {boolean}
-   */
-  isSecureChannel() {}
 
   /**
    * Accepts the result when ready. The client should verify the activity's

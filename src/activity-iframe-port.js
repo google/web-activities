@@ -22,7 +22,7 @@ import {
   ActivityResultCode,
 } from './activity-types';
 import {Messenger} from './messenger';
-import {getOriginFromUrl} from './utils';
+import {getOriginFromUrl, resolveResult} from './utils';
 
 
 /**
@@ -72,7 +72,7 @@ export class ActivityIframePort {
       this.readyResolver_ = resolve;
     });
 
-    /** @private {?function(!ActivityResult)} */
+    /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
 
     /** @private @const {!Promise<!ActivityResult>} */
@@ -117,21 +117,6 @@ export class ActivityIframePort {
   disconnect() {
     this.connected_ = false;
     this.messenger_.disconnect();
-  }
-
-  /** @override */
-  getTargetOrigin() {
-    return this.messenger_.getTargetOrigin();
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return true;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return true;
   }
 
   /** @override */
@@ -212,10 +197,11 @@ export class ActivityIframePort {
         const result = new ActivityResult(
             code,
             data,
-            this.getTargetOrigin(),
-            this.isTargetOriginVerified(),
-            this.isSecureChannel());
-        this.resultResolver_(result);
+            ActivityMode.IFRAME,
+            this.messenger_.getTargetOrigin(),
+            /* originVerified */ true,
+            /* secureChannel */ true);
+        resolveResult(this.win_, result, this.resultResolver_);
         this.resultResolver_ = null;
         this.messenger_.sendCommand('close');
         this.disconnect();

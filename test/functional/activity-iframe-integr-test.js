@@ -43,7 +43,13 @@ describes.fixture('ActivityIframePort integration', {}, env => {
 
   it('should return "canceled"', () => {
     fixture.send('return-canceled');
-    return port.acceptResult().then(result => {
+    return port.acceptResult().then(() => {
+      throw new Error('must have failed');
+    }, reason => {
+      expect(reason).to.be.instanceof(DOMException);
+      expect(reason.code).to.equal(20);
+      expect(reason.name).to.equal('AbortError');
+      const result = reason.activityResult;
       expect(result.ok).to.be.false;
       expect(result.code).to.equal(ActivityResultCode.CANCELED);
     });
@@ -51,7 +57,11 @@ describes.fixture('ActivityIframePort integration', {}, env => {
 
   it('should return "failed"', () => {
     fixture.send('return-failed', 'broken');
-    return port.acceptResult().then(result => {
+    return port.acceptResult().then(() => {
+      throw new Error('must have failed');
+    }, reason => {
+      expect(() => {throw reason;}).to.throw(/broken/);
+      const result = reason.activityResult;
       expect(result.ok).to.be.false;
       expect(result.code).to.equal(ActivityResultCode.FAILED);
       expect(result.error.message).to.match(/broken/);
