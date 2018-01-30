@@ -14,9 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 0.6.0 */
+ /** Version: 1.0.0 */
 'use strict';
 
+
+
+/**
+ * @enum {string}
+ */
+const ActivityMode = {
+  IFRAME: 'iframe',
+  POPUP: 'popup',
+  REDIRECT: 'redirect',
+};
 
 
 /**
@@ -39,15 +49,18 @@ class ActivityResult {
   /**
    * @param {!ActivityResultCode} code
    * @param {*} data
+   * @param {!ActivityMode} mode
    * @param {string} origin
    * @param {boolean} originVerified
    * @param {boolean} secureChannel
    */
-  constructor(code, data, origin, originVerified, secureChannel) {
+  constructor(code, data, mode, origin, originVerified, secureChannel) {
     /** @const {!ActivityResultCode} */
     this.code = code;
     /** @const {*} */
     this.data = code == ActivityResultCode.OK ? data : null;
+    /** @const {!ActivityMode} */
+    this.mode = mode;
     /** @const {string} */
     this.origin = origin;
     /** @const {boolean} */
@@ -98,16 +111,6 @@ let ActivityOpenOptions;
 
 
 /**
- * @enum {string}
- */
-const ActivityMode = {
-  IFRAME: 'iframe',
-  POPUP: 'popup',
-  REDIRECT: 'redirect',
-};
-
-
-/**
  * Activity client-side binding. The port provides limited ways to communicate
  * with the activity and receive signals and results from it. Not every type
  * of activity exposes a port.
@@ -121,30 +124,6 @@ class ActivityPort {
    * @return {!ActivityMode}
    */
   getMode() {}
-
-  /**
-   * The client's origin. The connection to the client must first succeed
-   * before the origin can be known with certainty.
-   * @return {string}
-   */
-  getTargetOrigin() {}
-
-  /**
-   * Whether the client's origin has been verified. This depends on the type of
-   * the client connection. When window messaging is used (for iframes and
-   * popups), the origin can be verified. In case of redirects, where state is
-   * passed in the URL, the verification is not fully possible.
-   * @return {boolean}
-   */
-  isTargetOriginVerified() {}
-
-  /**
-   * Whether the client/host communication is done via a secure channel such
-   * as messaging, or an open and easily exploitable channel, such redirect URL.
-   * Iframes and popups use a secure channel, and the redirect mode does not.
-   * @return {boolean}
-   */
-  isSecureChannel() {}
 
   /**
    * Accepts the result when ready. The client should verify the activity's
@@ -739,6 +718,12 @@ class ActivityIframeHost {
 
 
 
+/** DOMException.ABORT_ERR name */
+const ABORT_ERR_NAME = 'AbortError';
+
+/** DOMException.ABORT_ERR = 20 */
+const ABORT_ERR_CODE = 20;
+
 /** @type {?HTMLAnchorElement} */
 let aResolver;
 
@@ -822,6 +807,7 @@ function parseQueryString(query) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to get from the query string.
  * @return {?string}
  */
 function getQueryParam(queryString, param) {
@@ -846,6 +832,7 @@ function addFragmentParam(url, param, value) {
 /**
  * @param {string} queryString  A query string in the form of "a=b&c=d". Could
  *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to remove from the query string.
  * @return {?string}
  */
 function removeQueryParam(queryString, param) {
@@ -917,6 +904,54 @@ function serializeRequest(request) {
     map['originVerified'] = request.originVerified;
   }
   return JSON.stringify(map);
+}
+
+
+/**
+ * Creates or emulates a DOMException of AbortError type.
+ * See https://heycam.github.io/webidl/#aborterror.
+ * @param {!Window} win
+ * @param {string=} opt_message
+ * @return {!DOMException}
+ */
+function createAbortError(win, opt_message) {
+  const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
+  let error;
+  if ('DOMException' in win) {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string, string)} */ (
+        DOMException);
+    error = new constr(message, ABORT_ERR_NAME);
+  } else {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string)} */ (
+        Error);
+    error = new constr(message);
+    error.name = ABORT_ERR_NAME;
+    error.code = ABORT_ERR_CODE;
+  }
+  return error;
+}
+
+
+/**
+ * Resolves the activity result as a promise:
+ *  - `OK` result is yielded as the promise's payload;
+ *  - `CANCEL` result is rejected with the `AbortError`;
+ *  - `FAILED` result is rejected with the embedded error.
+ *
+ * @param {!Window} win
+ * @param {!./activity-types.ActivityResult} result
+ * @param {function((!./activity-types.ActivityResult|!Promise))} resolver
+ */
+function resolveResult(win, result, resolver) {
+  if (result.ok) {
+    resolver(result);
+  } else {
+    const error = result.error || createAbortError(win);
+    error.activityResult = result;
+    resolver(Promise.reject(error));
+  }
 }
 
 
@@ -1457,7 +1492,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '0.6.0';
+    this.version = '1.0.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1533,7 +1568,7 @@ class ActivityIframePort {
       this.readyResolver_ = resolve;
     });
 
-    /** @private {?function(!ActivityResult)} */
+    /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
 
     /** @private @const {!Promise<!ActivityResult>} */
@@ -1578,21 +1613,6 @@ class ActivityIframePort {
   disconnect() {
     this.connected_ = false;
     this.messenger_.disconnect();
-  }
-
-  /** @override */
-  getTargetOrigin() {
-    return this.messenger_.getTargetOrigin();
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return true;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return true;
   }
 
   /** @override */
@@ -1673,10 +1693,11 @@ class ActivityIframePort {
         const result = new ActivityResult(
             code,
             data,
-            this.getTargetOrigin(),
-            this.isTargetOriginVerified(),
-            this.isSecureChannel());
-        this.resultResolver_(result);
+            ActivityMode.IFRAME,
+            this.messenger_.getTargetOrigin(),
+            /* originVerified */ true,
+            /* secureChannel */ true);
+        resolveResult(this.win_, result, this.resultResolver_);
         this.resultResolver_ = null;
         this.messenger_.sendCommand('close');
         this.disconnect();
@@ -1698,7 +1719,7 @@ class ActivityIframePort {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPort}
@@ -1735,16 +1756,12 @@ class ActivityWindowPort {
     /** @private @const {?ActivityOpenOptions} */
     this.options_ = opt_options || null;
 
-    /** @private {?function(!ActivityResult)} */
+    /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
 
-    /** @private {?function(!Error)} */
-    this.resultReject_ = null;
-
     /** @private @const {!Promise<!ActivityResult>} */
-    this.resultPromise_ = new Promise((resolve, reject) => {
+    this.resultPromise_ = new Promise(resolve => {
       this.resultResolver_ = resolve;
-      this.resultReject_ = reject;
     });
 
     /** @private {?Window} */
@@ -1798,22 +1815,6 @@ class ActivityWindowPort {
       this.targetWin_ = null;
     }
     this.resultResolver_ = null;
-    this.resultReject_ = null;
-  }
-
-  /** @override */
-  getTargetOrigin() {
-    return this.messenger_.getTargetOrigin();
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return true;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return true;
   }
 
   /** @override */
@@ -1833,7 +1834,7 @@ class ActivityWindowPort {
   openInternal_() {
     const featuresStr = this.buildFeatures_();
 
-    // ensively, the URL will contain the request payload, unless explicitly
+    // Protectively, the URL will contain the request payload, unless explicitly
     // directed not to via `skipRequestInUrl` option.
     let url = this.url_;
     if (!(this.options_ && this.options_.skipRequestInUrl)) {
@@ -1956,8 +1957,8 @@ class ActivityWindowPort {
    * @private
    */
   disconnectWithError_(reason) {
-    if (this.resultReject_) {
-      this.resultReject_(reason);
+    if (this.resultResolver_) {
+      this.resultResolver_(Promise.reject(reason));
     }
     this.disconnect();
   }
@@ -1969,14 +1970,15 @@ class ActivityWindowPort {
    */
   result_(code, data) {
     if (this.resultResolver_) {
-      this.resultResolver_(new ActivityResult(
+      const result = new ActivityResult(
           code,
           data,
-          this.getTargetOrigin(),
-          this.isTargetOriginVerified(),
-          this.isSecureChannel()));
+          ActivityMode.POPUP,
+          this.messenger_.getTargetOrigin(),
+          /* originVerified */ true,
+          /* secureChannel */ true);
+      resolveResult(this.win_, result, this.resultResolver_);
       this.resultResolver_ = null;
-      this.resultReject_ = null;
     }
     if (this.messenger_) {
       this.messenger_.sendCommand('close');
@@ -2044,6 +2046,7 @@ function discoverRedirectPort(win, fragment, requestId) {
       getOriginFromUrl(win.document.referrer);
   const originVerified = origin == referrerOrigin;
   return new ActivityWindowRedirectPort(
+      win,
       code,
       data,
       origin,
@@ -2052,7 +2055,7 @@ function discoverRedirectPort(win, fragment, requestId) {
 
 
 /**
- * The `ActivityPort` implementation for the standalone window acitivity
+ * The `ActivityPort` implementation for the standalone window activity
  * client executed as a popup.
  *
  * @implements {ActivityPort}
@@ -2060,12 +2063,15 @@ function discoverRedirectPort(win, fragment, requestId) {
 class ActivityWindowRedirectPort {
 
   /**
+   * @param {!Window} win
    * @param {!ActivityResultCode} code
    * @param {*} data
    * @param {string} targetOrigin
    * @param {boolean} targetOriginVerified
    */
-  constructor(code, data, targetOrigin, targetOriginVerified) {
+  constructor(win, code, data, targetOrigin, targetOriginVerified) {
+    /** @private @const {!Window} */
+    this.win_ = win;
     /** @private @const {!ActivityResultCode} */
     this.code_ = code;
     /** @private @const {*} */
@@ -2082,28 +2088,17 @@ class ActivityWindowRedirectPort {
   }
 
   /** @override */
-  getTargetOrigin() {
-    return this.targetOrigin_;
-  }
-
-  /** @override */
-  isTargetOriginVerified() {
-    return this.targetOriginVerified_;
-  }
-
-  /** @override */
-  isSecureChannel() {
-    return false;
-  }
-
-  /** @override */
   acceptResult() {
-    return Promise.resolve(new ActivityResult(
+    const result = new ActivityResult(
         this.code_,
         this.data_,
+        ActivityMode.REDIRECT,
         this.targetOrigin_,
         this.targetOriginVerified_,
-        this.isSecureChannel()));
+        /* secureChannel */ false);
+    return new Promise(resolve => {
+      resolveResult(this.win_, result, resolve);
+    });
   }
 }
 
@@ -2121,7 +2116,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '0.6.0';
+    this.version = '1.0.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2202,14 +2197,14 @@ class ActivityPorts {
    * A typical implementation would look like:
    * ```
    * ports.onResult('request1', function(port) {
-   *   // Only verified origins are allowed.
-   *   if (port.getTargetOrigin() == expectedOrigin &&
-   *       port.isTargetOriginVerified() &&
-   *       port.isSecureChannel()) {
-   *     port.acceptResult().then(function(result) {
+   *   port.acceptResult().then(function(result) {
+   *     // Only verified origins are allowed.
+   *     if (result.origin == expectedOrigin &&
+   *         result.originVerified &&
+   *         result.secureChannel) {
    *       handleResultForRequest1(result);
-   *     });
-   *   }
+   *     }
+   *   });
    * })
    *
    * ports.open('request1', request1Url, '_blank');
