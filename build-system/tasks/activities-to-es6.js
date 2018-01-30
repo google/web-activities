@@ -63,11 +63,24 @@ exports.rollupActivities = function(inputFile, outputFile) {
     // 3. Replace "$internalRuntimeVersion$".
     js = js.replace(/\$internalRuntimeVersion\$/g, version);
 
+    // 4. Simplify long types.
+    js = js.replace(/\.\/activity-types\./g, '');
+
     return js;
   }).then(js => {
+    // Save.
     fs.writeFileSync(outputFile, js);
+    // Check some possible issues.
+    check(js, /\.\/[^*]/, 'All types must be expanded', outputFile);
   });
 };
+
+
+function check(js, regex, message, file) {
+  if (regex.test(js)) {
+    throw new Error(file + ': ' + message + ': ' + regex.exec(js)[0]);
+  }
+}
 
 
 function mkdirSync(path) {
