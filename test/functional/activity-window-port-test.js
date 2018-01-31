@@ -372,7 +372,16 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(heartbeatFunc).to.be.null;
         expect(port.heartbeatInterval_).to.be.null;
         expect(port.resultResolver_).to.be.null;
-        return expect(port.acceptResult()).to.be.eventually.rejected;
+        return port.acceptResult().then(() => {
+          throw new Error('must have failed');
+        }, reason => {
+          expect(reason.name).to.equal('AbortError');
+          const result = reason.activityResult;
+          expect(result.code).to.equal(ActivityResultCode.CANCELED);
+          expect(result.secureChannel).to.be.false;
+          expect(result.originVerified).to.be.false;
+          expect(result.origin).to.equal('https://example-sp.com');
+        });
       });
 
       describe('connected', () => {
@@ -428,6 +437,9 @@ describes.realWin('ActivityWindowPort', {}, env => {
             expect(reason.name).to.equal('AbortError');
             const result = reason.activityResult;
             expect(result.code).to.equal(ActivityResultCode.CANCELED);
+            expect(result.secureChannel).to.be.true;
+            expect(result.originVerified).to.be.true;
+            expect(result.origin).to.equal('https://example-sp.com');
           });
         });
 

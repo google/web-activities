@@ -74,6 +74,7 @@ describes.realWin('Messenger', {}, env => {
     });
 
     it('should return origin immediately', () => {
+      expect(messenger.isConnected()).to.be.true;
       expect(messenger.getTargetOrigin()).to.equal('https://example-sp.com');
     });
 
@@ -212,6 +213,7 @@ describes.realWin('Messenger', {}, env => {
     });
 
     it('should fail to return origin until connected', () => {
+      expect(messenger.isConnected()).to.be.false;
       expect(() => {
         messenger.getTargetOrigin();
       }).to.throw(/not connected/);
@@ -236,11 +238,13 @@ describes.realWin('Messenger', {}, env => {
     });
 
     it('should connect and initialize origin', () => {
+      expect(messenger.isConnected()).to.be.false;
       const handler = addEventListenerSpy.args[0][1];
       handler({
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
       });
+      expect(messenger.isConnected()).to.be.true;
       expect(messenger.getTargetOrigin()).to.equal('https://example-sp.com');
       expect(onCommand).to.be.calledOnce;
       expect(onCommand.args[0][0]).to.equal('start');
@@ -248,12 +252,14 @@ describes.realWin('Messenger', {}, env => {
     });
 
     it('should initialize origin when source matches', () => {
+      expect(messenger.isConnected()).to.be.false;
       const handler = addEventListenerSpy.args[0][1];
       handler({
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
         source: target,  // This is the important part where target matches.
       });
+      expect(messenger.isConnected()).to.be.true;
       expect(messenger.getTargetOrigin()).to.equal('https://example-sp.com');
     });
 
@@ -263,6 +269,7 @@ describes.realWin('Messenger', {}, env => {
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
       });
+      expect(messenger.isConnected()).to.be.false;
       expect(() => {
         messenger.getTargetOrigin();
       }).to.throw(/not connected/);
