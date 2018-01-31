@@ -76,6 +76,14 @@ export class Messenger {
   }
 
   /**
+   * Returns whether the messenger has been connected already.
+   * @return {boolean}
+   */
+  isConnected() {
+    return this.targetOrigin_ != null;
+  }
+
+  /**
    * Returns the messaging target. Only available when connection has been
    * establihsed.
    * @return {!Window}

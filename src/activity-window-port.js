@@ -286,13 +286,16 @@ export class ActivityWindowPort {
    */
   result_(code, data) {
     if (this.resultResolver_) {
+      const isConnected = this.messenger_.isConnected();
       const result = new ActivityResult(
           code,
           data,
           ActivityMode.POPUP,
-          this.messenger_.getTargetOrigin(),
-          /* originVerified */ true,
-          /* secureChannel */ true);
+          isConnected ?
+              this.messenger_.getTargetOrigin() :
+              getOriginFromUrl(this.url_),
+          /* originVerified */ isConnected,
+          /* secureChannel */ isConnected);
       resolveResult(this.win_, result, this.resultResolver_);
       this.resultResolver_ = null;
     }
