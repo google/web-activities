@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.1.0 */
+ /** Version: 1.2.0 */
 'use strict';
 
 
@@ -338,6 +338,14 @@ class Messenger {
       this.onCommand_ = null;
       this.win_.removeEventListener('message', this.boundHandleEvent_);
     }
+  }
+
+  /**
+   * Returns whether the messenger has been connected already.
+   * @return {boolean}
+   */
+  isConnected() {
+    return this.targetOrigin_ != null;
   }
 
   /**
@@ -1492,7 +1500,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.1.0';
+    this.version = '1.2.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1970,13 +1978,16 @@ class ActivityWindowPort {
    */
   result_(code, data) {
     if (this.resultResolver_) {
+      const isConnected = this.messenger_.isConnected();
       const result = new ActivityResult(
           code,
           data,
           ActivityMode.POPUP,
-          this.messenger_.getTargetOrigin(),
-          /* originVerified */ true,
-          /* secureChannel */ true);
+          isConnected ?
+              this.messenger_.getTargetOrigin() :
+              getOriginFromUrl(this.url_),
+          /* originVerified */ isConnected,
+          /* secureChannel */ isConnected);
       resolveResult(this.win_, result, this.resultResolver_);
       this.resultResolver_ = null;
     }
@@ -2116,7 +2127,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.1.0';
+    this.version = '1.2.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
