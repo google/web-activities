@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.1.0 */
+ /** Version: 1.2.0 */
 'use strict';
 
 
@@ -319,6 +319,14 @@ class Messenger {
       this.onCommand_ = null;
       this.win_.removeEventListener('message', this.boundHandleEvent_);
     }
+  }
+
+  /**
+   * Returns whether the messenger has been connected already.
+   * @return {boolean}
+   */
+  isConnected() {
+    return this.targetOrigin_ != null;
   }
 
   /**
@@ -1407,7 +1415,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.1.0';
+    this.version = '1.2.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
