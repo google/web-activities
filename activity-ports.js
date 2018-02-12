@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.2.1 */
+ /** Version: 1.3.0 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1272,7 +1272,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.2.1';
+    this.version = '1.3.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
