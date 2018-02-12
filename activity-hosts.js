@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.2.0 */
+ /** Version: 1.3.0 */
 'use strict';
 
+/*eslint no-unused-vars: 0*/
 
 
 /**
@@ -200,24 +201,39 @@ class ActivityHost {
   ready() {}
 
   /**
+   * Whether the supplemental messaging suppored for this host mode. Only iframe
+   * hosts can currently send and receive messages.
+   * @return {boolean}
+   */
+  isMessagingSupported() {}
+
+  /**
    * Sends a message to the client. Notice that only iframe hosts can send and
    * receive messages.
-   * @param {!Object} unusedPayload
+   * @param {!Object} payload
    */
-  message(unusedPayload) {}
+  message(payload) {}
 
   /**
    * Registers a callback to receive messages from the client. Notice that only
    * iframe hosts can send and receive messages.
-   * @param {function(!Object)} unusedCallback
+   * @param {function(!Object)} callback
    */
-  onMessage(unusedCallback) {}
+  onMessage(callback) {}
+
+  /**
+   * Creates a new supplemental communication channel or returns an existing
+   * one. Notice that only iframe hosts can send and receive messages.
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  messageChannel(opt_name) {}
 
   /**
    * Signals to the activity client the result of the activity.
-   * @param {*} unusedData
+   * @param {*} data
    */
-  result(unusedData) {}
+  result(data) {}
 
   /**
    * Signals to the activity client that the activity has been canceled by the
@@ -227,17 +243,17 @@ class ActivityHost {
 
   /**
    * Signals to the activity client that the activity has unrecoverably failed.
-   * @param {!Error} unusedReason
+   * @param {!Error} reason
    */
-  failed(unusedReason) {}
+  failed(reason) {}
 
   /**
    * Set the size container. This element will be used to measure the
    * size needed by the iframe. Not required for non-iframe hosts. The
    * needed height is calculated as `sizeContainer.scrollHeight`.
-   * @param {!Element} unusedElement
+   * @param {!Element} element
    */
-  setSizeContainer(unusedElement) {}
+  setSizeContainer(element) {}
 
   /**
    * Signals to the activity client that the activity's size needs might have
@@ -249,9 +265,9 @@ class ActivityHost {
    * The callback the activity implementation can implement to react to changes
    * in size. Normally, this callback is called in reaction to the `resized()`
    * method.
-   * @param {function(number, number, boolean)} unusedCallback
+   * @param {function(number, number, boolean)} callback
    */
-  onResizeComplete(unusedCallback) {}
+  onResizeComplete(callback) {}
 
   /**
    * Disconnect the activity implementation and cleanup listeners.
@@ -262,7 +278,6 @@ class ActivityHost {
 
 
 const SENTINEL = '__ACTIVITIES__';
-
 
 /**
  * The messenger helper for activity's port and host.
@@ -295,6 +310,11 @@ class Messenger {
     /** @private {?function(!Object)} */
     this.onCustomMessage_ = null;
 
+    /**
+     * @private {?Object<string, !ChannelHolder>}
+     */
+    this.channels_ = null;
+
     /** @private @const */
     this.boundHandleEvent_ = this.handleEvent_.bind(this);
   }
@@ -318,6 +338,18 @@ class Messenger {
     if (this.onCommand_) {
       this.onCommand_ = null;
       this.win_.removeEventListener('message', this.boundHandleEvent_);
+      if (this.channels_) {
+        for (const k in this.channels_) {
+          const channelObj = this.channels_[k];
+          if (channelObj.port1) {
+            closePort(channelObj.port1);
+          }
+          if (channelObj.port2) {
+            closePort(channelObj.port2);
+          }
+        }
+        this.channels_ = null;
+      }
     }
   }
 
@@ -373,8 +405,9 @@ class Messenger {
    * Sends the specified command from the port to the host or vice versa.
    * @param {string} cmd
    * @param {?Object=} opt_payload
+   * @param {?Array=} opt_transfer
    */
-  sendCommand(cmd, opt_payload) {
+  sendCommand(cmd, opt_payload, opt_transfer) {
     const target = this.getTarget();
     // Only "connect" command is allowed to use `targetOrigin == '*'`
     const targetOrigin =
@@ -385,7 +418,7 @@ class Messenger {
       'sentinel': SENTINEL,
       'cmd': cmd,
       'payload': opt_payload || null,
-    }, targetOrigin);
+    }, targetOrigin, opt_transfer || undefined);
   }
 
   /**
@@ -402,6 +435,76 @@ class Messenger {
    */
   onCustomMessage(callback) {
     this.onCustomMessage_ = callback;
+  }
+
+  /**
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  startChannel(opt_name) {
+    const name = opt_name || '';
+    const channelObj = this.getChannelObj_(name);
+    if (!channelObj.port1) {
+      const channel = new this.win_.MessageChannel();
+      channelObj.port1 = channel.port1;
+      channelObj.port2 = channel.port2;
+      channelObj.resolver(channelObj.port1);
+    }
+    if (channelObj.port2) {
+      // Not yet sent.
+      this.sendCommand('cnset', {'name': name}, [channelObj.port2]);
+      channelObj.port2 = null;
+    }
+    return channelObj.promise;
+  }
+
+  /**
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  askChannel(opt_name) {
+    const name = opt_name || '';
+    const channelObj = this.getChannelObj_(name);
+    if (!channelObj.port1) {
+      this.sendCommand('cnget', {'name': name});
+    }
+    return channelObj.promise;
+  }
+
+  /**
+   * @param {string} name
+   * @param {!MessagePort} port
+   * @private
+   */
+  receiveChannel_(name, port) {
+    const channelObj = this.getChannelObj_(name);
+    channelObj.port1 = port;
+    channelObj.resolver(port);
+  }
+
+  /**
+   * @param {string} name
+   * @return {!ChannelHolder}
+   */
+  getChannelObj_(name) {
+    if (!this.channels_) {
+      this.channels_ = {};
+    }
+    let channelObj = this.channels_[name];
+    if (!channelObj) {
+      let resolver;
+      const promise = new Promise(resolve => {
+        resolver = resolve;
+      });
+      channelObj = {
+        port1: null,
+        port2: null,
+        resolver,
+        promise,
+      };
+      this.channels_[name] = channelObj;
+    }
+    return channelObj;
   }
 
   /**
@@ -429,22 +532,42 @@ class Messenger {
     if (origin != this.targetOrigin_) {
       return;
     }
-    this.handleCommand_(cmd, payload);
+    this.handleCommand_(cmd, payload, event);
   }
 
   /**
    * @param {string} cmd
    * @param {?Object} payload
+   * @param {!MessageEvent} event
    * @private
    */
-  handleCommand_(cmd, payload) {
+  handleCommand_(cmd, payload, event) {
     if (cmd == 'msg') {
       if (this.onCustomMessage_ != null && payload != null) {
         this.onCustomMessage_(payload);
       }
+    } else if (cmd == 'cnget') {
+      const name = payload['name'];
+      this.startChannel(name);
+    } else if (cmd == 'cnset') {
+      const name = payload['name'];
+      const port = event.ports[0];
+      this.receiveChannel_(name, /** @type {!MessagePort} */ (port));
     } else {
       this.onCommand_(cmd, payload);
     }
+  }
+}
+
+
+/**
+ * @param {!MessagePort} port
+ */
+function closePort(port) {
+  try {
+    port.close();
+  } catch (e) {
+    // Ignore.
   }
 }
 
@@ -598,6 +721,11 @@ class ActivityIframeHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return true;
+  }
+
+  /** @override */
   message(payload) {
     this.ensureAccepted_();
     this.messenger_.customMessage(payload);
@@ -607,6 +735,12 @@ class ActivityIframeHost {
   onMessage(callback) {
     this.ensureAccepted_();
     this.messenger_.onCustomMessage(callback);
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    return this.messenger_.startChannel(opt_name);
   }
 
   /** @override */
@@ -1039,6 +1173,11 @@ class ActivityWindowPopupHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return false;
+  }
+
+  /** @override */
   message() {
     this.ensureAccepted_();
     // Not supported for compatibility with redirect mode.
@@ -1048,6 +1187,12 @@ class ActivityWindowPopupHost {
   onMessage() {
     this.ensureAccepted_();
     // Not supported for compatibility with redirect mode.
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    throw new Error('not supported');
   }
 
   /** @override */
@@ -1309,6 +1454,11 @@ class ActivityWindowRedirectHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return false;
+  }
+
+  /** @override */
   message() {
     this.ensureAccepted_();
     // Not supported. Infeasible.
@@ -1318,6 +1468,12 @@ class ActivityWindowRedirectHost {
   onMessage() {
     this.ensureAccepted_();
     // Not supported. Infeasible.
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    throw new Error('not supported');
   }
 
   /** @override */
@@ -1415,7 +1571,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.2.0';
+    this.version = '1.3.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
