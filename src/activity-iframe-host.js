@@ -171,6 +171,11 @@ export class ActivityIframeHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return true;
+  }
+
+  /** @override */
   message(payload) {
     this.ensureAccepted_();
     this.messenger_.customMessage(payload);
@@ -180,6 +185,12 @@ export class ActivityIframeHost {
   onMessage(callback) {
     this.ensureAccepted_();
     this.messenger_.onCustomMessage(callback);
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    return this.messenger_.startChannel(opt_name);
   }
 
   /** @override */

@@ -191,6 +191,11 @@ export class ActivityWindowPopupHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return false;
+  }
+
+  /** @override */
   message() {
     this.ensureAccepted_();
     // Not supported for compatibility with redirect mode.
@@ -200,6 +205,12 @@ export class ActivityWindowPopupHost {
   onMessage() {
     this.ensureAccepted_();
     // Not supported for compatibility with redirect mode.
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    throw new Error('not supported');
   }
 
   /** @override */
@@ -461,6 +472,11 @@ export class ActivityWindowRedirectHost {
   }
 
   /** @override */
+  isMessagingSupported() {
+    return false;
+  }
+
+  /** @override */
   message() {
     this.ensureAccepted_();
     // Not supported. Infeasible.
@@ -470,6 +486,12 @@ export class ActivityWindowRedirectHost {
   onMessage() {
     this.ensureAccepted_();
     // Not supported. Infeasible.
+  }
+
+  /** @override */
+  messageChannel(opt_name) {
+    this.ensureAccepted_();
+    throw new Error('not supported');
   }
 
   /** @override */

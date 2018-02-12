@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*eslint no-unused-vars: 0*/
 
 
 /**
@@ -216,24 +217,39 @@ export class ActivityHostDef {
   ready() {}
 
   /**
+   * Whether the supplemental messaging suppored for this host mode. Only iframe
+   * hosts can currently send and receive messages.
+   * @return {boolean}
+   */
+  isMessagingSupported() {}
+
+  /**
    * Sends a message to the client. Notice that only iframe hosts can send and
    * receive messages.
-   * @param {!Object} unusedPayload
+   * @param {!Object} payload
    */
-  message(unusedPayload) {}
+  message(payload) {}
 
   /**
    * Registers a callback to receive messages from the client. Notice that only
    * iframe hosts can send and receive messages.
-   * @param {function(!Object)} unusedCallback
+   * @param {function(!Object)} callback
    */
-  onMessage(unusedCallback) {}
+  onMessage(callback) {}
+
+  /**
+   * Creates a new supplemental communication channel or returns an existing
+   * one. Notice that only iframe hosts can send and receive messages.
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  messageChannel(opt_name) {}
 
   /**
    * Signals to the activity client the result of the activity.
-   * @param {*} unusedData
+   * @param {*} data
    */
-  result(unusedData) {}
+  result(data) {}
 
   /**
    * Signals to the activity client that the activity has been canceled by the
@@ -243,17 +259,17 @@ export class ActivityHostDef {
 
   /**
    * Signals to the activity client that the activity has unrecoverably failed.
-   * @param {!Error} unusedReason
+   * @param {!Error} reason
    */
-  failed(unusedReason) {}
+  failed(reason) {}
 
   /**
    * Set the size container. This element will be used to measure the
    * size needed by the iframe. Not required for non-iframe hosts. The
    * needed height is calculated as `sizeContainer.scrollHeight`.
-   * @param {!Element} unusedElement
+   * @param {!Element} element
    */
-  setSizeContainer(unusedElement) {}
+  setSizeContainer(element) {}
 
   /**
    * Signals to the activity client that the activity's size needs might have
@@ -265,9 +281,9 @@ export class ActivityHostDef {
    * The callback the activity implementation can implement to react to changes
    * in size. Normally, this callback is called in reaction to the `resized()`
    * method.
-   * @param {function(number, number, boolean)} unusedCallback
+   * @param {function(number, number, boolean)} callback
    */
-  onResizeComplete(unusedCallback) {}
+  onResizeComplete(callback) {}
 
   /**
    * Disconnect the activity implementation and cleanup listeners.

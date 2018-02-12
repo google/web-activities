@@ -372,10 +372,16 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
           /* overfow */ true);
     });
 
+    it('should NOT support messaging at all', () => {
+      expect(host.isMessagingSupported()).to.be.false;
+    });
+
     it('should NOT allow messaging before accept', () => {
       expect(() => host.message({a: 1}))
           .to.throw(/not accepted/);
       expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+      expect(() => host.messageChannel('a'))
           .to.throw(/not accepted/);
     });
 
@@ -387,6 +393,13 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       expect(() => {
         host.onMessage(function() {});
       }).to.not.throw();
+    });
+
+    it('should fail to create messaging channel', () => {
+      host.accept();
+      expect(() => {
+        host.messageChannel('a');
+      }).to.throw('not supported');
     });
   });
 });
@@ -849,10 +862,16 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
           /* overfow */ true);
     });
 
+    it('should NOT support messaging at all', () => {
+      expect(host.isMessagingSupported()).to.be.false;
+    });
+
     it('should NOT allow messaging before accept', () => {
       expect(() => host.message({a: 1}))
           .to.throw(/not accepted/);
       expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+      expect(() => host.messageChannel('a'))
           .to.throw(/not accepted/);
     });
 
@@ -864,6 +883,13 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
       expect(() => {
         host.onMessage(function() {});
       }).to.not.throw();
+    });
+
+    it('should fail to create messaging channel', () => {
+      host.accept();
+      expect(() => {
+        host.messageChannel('a');
+      }).to.throw('not supported');
     });
   });
 });

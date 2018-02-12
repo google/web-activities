@@ -214,5 +214,25 @@ describes.realWin('ActivityIframePort', {}, env => {
       expect(spy).to.be.calledOnce;
       expect(spy).to.be.calledWith({a: 1});
     });
+
+    it('should ask the default messaging channel', () => {
+      const sidePort = {};
+      const startChannelStub = sandbox.stub(messenger, 'askChannel',
+          () => Promise.resolve(sidePort));
+      return port.messageChannel().then(res => {
+        expect(res).to.equal(sidePort);
+        expect(startChannelStub).to.be.calledOnce.calledWith(undefined);
+      });
+    });
+
+    it('should ask a named messaging channel', () => {
+      const sidePort = {};
+      const startChannelStub = sandbox.stub(messenger, 'askChannel',
+          () => Promise.resolve(sidePort));
+      return port.messageChannel('a').then(res => {
+        expect(res).to.equal(sidePort);
+        expect(startChannelStub).to.be.calledOnce.calledWith('a');
+      });
+    });
   });
 });

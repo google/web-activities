@@ -186,6 +186,131 @@ describes.realWin('Messenger', {}, env => {
       });
       expect(onMessage).to.not.be.called;
     });
+
+    describe('messaging channel', () => {
+      it('should fail asking a channel until connected', () => {
+        expect(() => {
+          messenger.askChannel();
+        }).to.throw(/not connected/);
+      });
+
+      it('should ask/receive a channel', () => {
+        const port = {};
+        source = {
+          postMessage: sandbox.spy(),
+        };
+        const promise = messenger.askChannel('A');
+        expect(source.postMessage).to.be.calledOnce;
+        expect(source.postMessage.args[0][0]).to.deep.equal({
+          sentinel: '__ACTIVITIES__',
+          cmd: 'cnget',
+          payload: {'name': 'A'},
+        });
+        expect(source.postMessage.args[0][1])
+            .to.equal('https://example-sp.com');
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-sp.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'A'},
+          },
+          ports: [port],
+        });
+        return promise.then(res => {
+          expect(res).to.equal(port);
+          // Repeated call will return the same port.
+          const p2 = messenger.askChannel('A');
+          expect(p2).to.equal(promise);
+          expect(source.postMessage).to.be.calledOnce;  // No more calls.
+          return expect(p2).to.eventually.equal(port);
+        });
+      });
+
+      it('should resolve port before asking', () => {
+        const port = {};
+        source = {
+          postMessage: sandbox.spy(),
+        };
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-sp.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'A'},
+          },
+          ports: [port],
+        });
+        return messenger.askChannel('A').then(res => {
+          expect(res).to.equal(port);
+          expect(source.postMessage).to.not.be.called;
+        });
+      });
+
+      it('should ask a default channel', () => {
+        source = {
+          postMessage: sandbox.spy(),
+        };
+        messenger.askChannel();
+        expect(source.postMessage).to.be.calledOnce;
+        expect(source.postMessage.args[0][0]).to.deep.equal({
+          sentinel: '__ACTIVITIES__',
+          cmd: 'cnget',
+          payload: {'name': ''},
+        });
+      });
+
+      it('should close ports and tolerate errors', () => {
+        const port1 = {
+          close: sandbox.spy(),
+        };
+        const port2 = {
+          close: function() {
+            throw new Error('broken');
+          },
+        };
+        const port3 = {
+          close: sandbox.spy(),
+        };
+        source = {
+          postMessage: sandbox.spy(),
+        };
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-sp.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'A'},
+          },
+          ports: [port1],
+        });
+        handler({
+          origin: 'https://example-sp.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'B'},
+          },
+          ports: [port2],
+        });
+        handler({
+          origin: 'https://example-sp.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'C'},
+          },
+          ports: [port3],
+        });
+        messenger.disconnect();
+        expect(port1.close).to.be.calledOnce;
+        // port2 is expected to fail.
+        expect(port3.close).to.be.calledOnce;
+      });
+    });
   });
 
 
@@ -274,6 +399,121 @@ describes.realWin('Messenger', {}, env => {
         messenger.getTargetOrigin();
       }).to.throw(/not connected/);
       expect(onCommand).to.not.be.called;
+    });
+
+    describe('messaging channel', () => {
+      let channels;
+
+      beforeEach(() => {
+        channels = [];
+        sandbox.stub(win, 'MessageChannel', function() {
+          channels.push(this);
+          this.port1 = {
+            close: sandbox.spy(),
+          };
+          this.port2 = {
+            close: sandbox.spy(),
+          };
+        });
+      });
+
+      it('should fail to start a channel until connected', () => {
+        expect(() => {
+          messenger.startChannel();
+        }).to.throw(/not connected/);
+      });
+
+      it('should start and resolve a channel', () => {
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-pub.com',
+          data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+        });
+        target.postMessage.reset();
+        return messenger.startChannel('A').then(port => {
+          expect(port).to.exist;
+          expect(channels).to.have.length(1);
+          expect(port).to.equal(channels[0].port1);
+          expect(target.postMessage).to.be.calledOnce;
+          expect(target.postMessage.args[0][0]).to.deep.equal({
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: 'A'},
+          });
+          expect(target.postMessage.args[0][1])
+              .to.equal('https://example-pub.com');
+          expect(target.postMessage.args[0][2])
+              .to.deep.equal([channels[0].port2]);
+
+          // Repeat. Will return the same channel.
+          return messenger.startChannel('A');
+        }).then(port => {
+          expect(channels).to.have.length(1);
+          expect(port).to.equal(channels[0].port1);
+          expect(target.postMessage).to.be.calledOnce;
+        });
+      });
+
+      it('should resolve a pre-requested channel', () => {
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-pub.com',
+          data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+        });
+        handler({
+          origin: 'https://example-pub.com',
+          data: {
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnget',
+            payload: {name: 'A'},
+          },
+        });
+        target.postMessage.reset();
+        return messenger.startChannel('A').then(port => {
+          expect(channels).to.have.length(1);
+          expect(port).to.equal(channels[0].port1);
+          expect(target.postMessage).to.not.be.called;
+        });
+      });
+
+      it('should start and resolve the default channel', () => {
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-pub.com',
+          data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+        });
+        target.postMessage.reset();
+        return messenger.startChannel().then(port => {
+          expect(port).to.exist;
+          expect(channels).to.have.length(1);
+          expect(port).to.equal(channels[0].port1);
+          expect(target.postMessage).to.be.calledOnce;
+          expect(target.postMessage.args[0][0]).to.deep.equal({
+            sentinel: '__ACTIVITIES__',
+            cmd: 'cnset',
+            payload: {name: ''},
+          });
+          expect(target.postMessage.args[0][2])
+              .to.deep.equal([channels[0].port2]);
+        });
+      });
+
+      it('should disconnect all ports', () => {
+        const handler = addEventListenerSpy.args[0][1];
+        handler({
+          origin: 'https://example-pub.com',
+          data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+        });
+        messenger.startChannel('A');
+        messenger.startChannel('B');
+        messenger.disconnect();
+        expect(channels).to.have.length(2);
+        expect(channels[0].port1.close).to.be.calledOnce;
+        expect(channels[1].port1.close).to.be.calledOnce;
+        // Transfered ports are not touched.
+        expect(channels[0].port2.close).to.not.be.called;
+        expect(channels[1].port2.close).to.not.be.called;
+      });
     });
   });
 });

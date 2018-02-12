@@ -141,6 +141,15 @@ export class ActivityIframePort {
   }
 
   /**
+   * Creates a new communication channel or returns an existing one.
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  messageChannel(opt_name) {
+    return this.messenger_.askChannel(opt_name);
+  }
+
+  /**
    * Returns a promise that yields when the iframe is ready to be interacted
    * with.
    * @return {!Promise}

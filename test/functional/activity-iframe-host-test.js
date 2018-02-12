@@ -101,6 +101,8 @@ describes.realWin('ActivityIframeHost', {}, env => {
         .to.throw(/not connected/);
     expect(() => host.message({a: 1}))
         .to.throw(/not connected|not accepted/);
+    expect(() => host.messageChannel('a'))
+        .to.throw(/not connected|not accepted/);
   });
 
   describe('commands', () => {
@@ -337,10 +339,16 @@ describes.realWin('ActivityIframeHost', {}, env => {
       });
     });
 
+    it('should support custom messaging', () => {
+      expect(host.isMessagingSupported()).to.be.true;
+    });
+
     it('should NOT allow messaging before accept', () => {
       expect(() => host.message({a: 1}))
           .to.throw(/not accepted/);
       expect(() => host.onMessage(function() {}))
+          .to.throw(/not accepted/);
+      expect(() => host.messageChannel('a'))
           .to.throw(/not accepted/);
     });
 
@@ -358,6 +366,28 @@ describes.realWin('ActivityIframeHost', {}, env => {
       messenger.handleCommand_('msg', {a: 1});
       expect(spy).to.be.calledOnce;
       expect(spy).to.be.calledWith({a: 1});
+    });
+
+    it('should start custom default messaging channel', () => {
+      const port = {};
+      const startChannelStub = sandbox.stub(messenger, 'startChannel',
+          () => Promise.resolve(port));
+      host.accept();
+      return host.messageChannel().then(res => {
+        expect(res).to.equal(port);
+        expect(startChannelStub).to.be.calledOnce.calledWith(undefined);
+      });
+    });
+
+    it('should start custom named messaging channel', () => {
+      const port = {};
+      const startChannelStub = sandbox.stub(messenger, 'startChannel',
+          () => Promise.resolve(port));
+      host.accept();
+      return host.messageChannel('a').then(res => {
+        expect(res).to.equal(port);
+        expect(startChannelStub).to.be.calledOnce.calledWith('a');
+      });
     });
   });
 });
