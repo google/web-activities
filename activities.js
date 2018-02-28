@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.3.0 */
+ /** Version: 1.4.0 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1153,6 +1153,9 @@ class ActivityWindowPopupHost {
 
     /** @private @const {!ActivityWindowRedirectHost} */
     this.redirectHost_ = new ActivityWindowRedirectHost(this.win_);
+
+    /** @private @const {!Function} */
+    this.boundUnload_ = this.unload_.bind(this);
   }
 
   /**
@@ -1183,6 +1186,7 @@ class ActivityWindowPopupHost {
     this.connected_ = false;
     this.accepted_ = false;
     this.messenger_.disconnect();
+    this.win_.removeEventListener('unload', this.boundUnload_);
 
     // Try to close the window. A similar attempt will be made by the client
     // port.
@@ -1326,6 +1330,7 @@ class ActivityWindowPopupHost {
       'data': data,
     });
     // Do not disconnect, wait for "close" message to ack the result receipt.
+    this.win_.removeEventListener('unload', this.boundUnload_);
     // TODO(dvoytenko): Consider taking an action if result acknowledgement
     // does not arrive in some time (3-5s). For instance, we can redirect
     // back or ask the host implementer to take an action.
@@ -1342,6 +1347,7 @@ class ActivityWindowPopupHost {
       this.args_ = payload;
       this.connected_ = true;
       this.connectedResolver_(this);
+      this.win_.addEventListener('unload', this.boundUnload_);
     } else if (cmd == 'close') {
       this.disconnect();
     }
@@ -1359,6 +1365,11 @@ class ActivityWindowPopupHost {
             allowedHeight < requestedHeight);
       }
     }
+  }
+
+  /** @private */
+  unload_() {
+    this.messenger_.sendCommand('check', {});
   }
 }
 
@@ -1656,7 +1667,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.3.0';
+    this.version = '1.4.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2100,19 +2111,7 @@ class ActivityWindowPort {
     // Keep alive to catch the window closing, which would indicate
     // "cancel" signal.
     this.heartbeatInterval_ = this.win_.setInterval(() => {
-      if (!this.targetWin_ || this.targetWin_.closed) {
-        this.win_.clearInterval(this.heartbeatInterval_);
-        this.heartbeatInterval_ = null;
-        // Give a chance for the result to arrive, but otherwise consider the
-        // responce to be empty.
-        this.win_.setTimeout(() => {
-          try {
-            this.result_(ActivityResultCode.CANCELED, /* data */ null);
-          } catch (e) {
-            this.disconnectWithError_(e);
-          }
-        }, 3000);
-      }
+      this.check_(/* delayCancel */ true);
     }, 500);
 
     // Start up messaging. The messaging is explicitly allowed to proceed
@@ -2123,6 +2122,26 @@ class ActivityWindowPort {
         /** @type {!Window} */ (this.targetWin_),
         /* targetOrigin */ null);
     this.messenger_.connect(this.handleCommand_.bind(this));
+  }
+
+  /**
+   * @param {boolean=} opt_delayCancel
+   * @private
+   */
+  check_(opt_delayCancel) {
+    if (!this.targetWin_ || this.targetWin_.closed) {
+      this.win_.clearInterval(this.heartbeatInterval_);
+      this.heartbeatInterval_ = null;
+      // Give a chance for the result to arrive, but otherwise consider the
+      // responce to be empty.
+      this.win_.setTimeout(() => {
+        try {
+          this.result_(ActivityResultCode.CANCELED, /* data */ null);
+        } catch (e) {
+          this.disconnectWithError_(e);
+        }
+      }, opt_delayCancel ? 3000 : 0);
+    }
   }
 
   /**
@@ -2179,6 +2198,8 @@ class ActivityWindowPort {
           new Error(payload['data'] || '') :
           payload['data'];
       this.result_(code, data);
+    } else if (cmd == 'check') {
+      this.win_.setTimeout(() => this.check_(), 200);
     }
   }
 }
@@ -2292,7 +2313,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.3.0';
+    this.version = '1.4.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
