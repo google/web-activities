@@ -243,19 +243,7 @@ export class ActivityWindowPort {
     // Keep alive to catch the window closing, which would indicate
     // "cancel" signal.
     this.heartbeatInterval_ = this.win_.setInterval(() => {
-      if (!this.targetWin_ || this.targetWin_.closed) {
-        this.win_.clearInterval(this.heartbeatInterval_);
-        this.heartbeatInterval_ = null;
-        // Give a chance for the result to arrive, but otherwise consider the
-        // responce to be empty.
-        this.win_.setTimeout(() => {
-          try {
-            this.result_(ActivityResultCode.CANCELED, /* data */ null);
-          } catch (e) {
-            this.disconnectWithError_(e);
-          }
-        }, 3000);
-      }
+      this.check_(/* delayCancel */ true);
     }, 500);
 
     // Start up messaging. The messaging is explicitly allowed to proceed
@@ -266,6 +254,26 @@ export class ActivityWindowPort {
         /** @type {!Window} */ (this.targetWin_),
         /* targetOrigin */ null);
     this.messenger_.connect(this.handleCommand_.bind(this));
+  }
+
+  /**
+   * @param {boolean=} opt_delayCancel
+   * @private
+   */
+  check_(opt_delayCancel) {
+    if (!this.targetWin_ || this.targetWin_.closed) {
+      this.win_.clearInterval(this.heartbeatInterval_);
+      this.heartbeatInterval_ = null;
+      // Give a chance for the result to arrive, but otherwise consider the
+      // responce to be empty.
+      this.win_.setTimeout(() => {
+        try {
+          this.result_(ActivityResultCode.CANCELED, /* data */ null);
+        } catch (e) {
+          this.disconnectWithError_(e);
+        }
+      }, opt_delayCancel ? 3000 : 0);
+    }
   }
 
   /**
@@ -322,6 +330,8 @@ export class ActivityWindowPort {
           new Error(payload['data'] || '') :
           payload['data'];
       this.result_(code, data);
+    } else if (cmd == 'check') {
+      this.win_.setTimeout(() => this.check_(), 200);
     }
   }
 }

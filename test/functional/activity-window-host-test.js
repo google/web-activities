@@ -30,6 +30,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
   let messenger;
   let closer, closeSpy;
   let container;
+  let events;
 
   beforeEach(() => {
     win = env.win;
@@ -50,6 +51,27 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     container = doc.createElement('div');
     doc.body.appendChild(container);
     host.setSizeContainer(container);
+
+    events = {};
+    const origAddEvent = win.addEventListener;
+    const origRemoveEvent = win.removeEventListener;
+    sandbox.stub(win, 'addEventListener', function(type, listener) {
+      origAddEvent.apply(win, Array.prototype.slice.call(arguments, 0));
+      if (!events[type]) {
+        events[type] = [listener];
+      } else {
+        events[type].push(listener);
+      }
+    });
+    sandbox.stub(win, 'removeEventListener', function(type, listener) {
+      origRemoveEvent.apply(win, Array.prototype.slice.call(arguments, 0));
+      if (events[type]) {
+        const index = events[type].indexOf(listener);
+        if (index != -1) {
+          events[type].splice(index, 1);
+        }
+      }
+    });
   });
 
   afterEach(() => {
@@ -112,6 +134,40 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     };
     host.disconnect();
     expect(closeSpy).to.be.calledOnce;
+  });
+
+  it('should handle unload', () => {
+    // Before connect.
+    expect(events['unload'] || []).to.have.length(0);
+    // Connect.
+    const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+    sandbox.stub(host.redirectHost_, 'connect',
+        () => Promise.resolve());
+    const connectPromise = host.connect('{}');
+    return Promise.resolve().then(() => {
+      // Skip a microtask.
+      return Promise.resolve();
+    }).then(() => {
+      messenger.handleEvent_({
+        origin: 'https://example-pub.com',
+        data: {
+          sentinel: '__ACTIVITIES__',
+          cmd: 'start',
+        },
+      });
+      return connectPromise;
+    }).then(() => {
+      // Connected.
+      expect(events['unload'] || []).to.have.length(1);
+
+      // Call unload.
+      events['unload'][0]();
+      expect(sendCommandStub).to.be.calledWith('check');
+
+      // Disconnect.
+      host.disconnect();
+      expect(events['unload'] || []).to.have.length(0);
+    });
   });
 
   it('should continue with popup host if connect arrives on time', () => {
@@ -257,25 +313,30 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     });
 
     it('should allow cancel before accept', () => {
+      expect(events['unload'] || []).to.have.length(1);
       host.cancel();
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('result', {
         code: 'canceled',
         data: null,
       });
+      expect(events['unload'] || []).to.have.length(0);
     });
 
     it('should allow failed before accept', () => {
+      expect(events['unload'] || []).to.have.length(1);
       host.failed(new Error('intentional'));
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('result', {
         code: 'failed',
         data: 'Error: intentional',
       });
+      expect(events['unload'] || []).to.have.length(0);
     });
 
     it('should yield "result"', () => {
       host.accept();
+      expect(events['unload'] || []).to.have.length(1);
       const disconnectStub = sandbox.stub(host, 'disconnect');
       host.result('abc');
       expect(sendCommandStub).to.be.calledOnce;
@@ -283,6 +344,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         code: 'ok',
         data: 'abc',
       });
+      expect(events['unload'] || []).to.have.length(0);
       // Do not disconnect, wait for "close" message to ack the result receipt.
       expect(disconnectStub).to.not.be.called;
     });

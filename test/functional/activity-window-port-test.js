@@ -297,10 +297,11 @@ describes.realWin('ActivityWindowPort', {}, env => {
       });
 
       function flushTimeouts() {
-        timeoutCallbacks.forEach(callback => {
+        const callbacks = timeoutCallbacks.slice(0);
+        timeoutCallbacks.length = 0;
+        callbacks.forEach(callback => {
           callback();
         });
-        timeoutCallbacks.length = 0;
       }
 
       it('should create messenger', () => {
@@ -440,6 +441,21 @@ describes.realWin('ActivityWindowPort', {}, env => {
             expect(result.secureChannel).to.be.true;
             expect(result.originVerified).to.be.true;
             expect(result.origin).to.equal('https://example-sp.com');
+          });
+        });
+
+        it('should check if window still exists on unload message', () => {
+          flushTimeouts();
+          popup.closed = true;
+          onCommand('check', {});
+          flushTimeouts();
+          return Promise.resolve().then(() => {
+            flushTimeouts();
+            return port.acceptResult();
+          }).then(() => {
+            throw new Error('must have failed');
+          }, reason => {
+            expect(reason.name).to.equal('AbortError');
           });
         });
 
