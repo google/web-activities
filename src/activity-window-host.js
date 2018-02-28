@@ -86,6 +86,9 @@ export class ActivityWindowPopupHost {
 
     /** @private @const {!ActivityWindowRedirectHost} */
     this.redirectHost_ = new ActivityWindowRedirectHost(this.win_);
+
+    /** @private @const {!Function} */
+    this.boundUnload_ = this.unload_.bind(this);
   }
 
   /**
@@ -116,6 +119,7 @@ export class ActivityWindowPopupHost {
     this.connected_ = false;
     this.accepted_ = false;
     this.messenger_.disconnect();
+    this.win_.removeEventListener('unload', this.boundUnload_);
 
     // Try to close the window. A similar attempt will be made by the client
     // port.
@@ -259,6 +263,7 @@ export class ActivityWindowPopupHost {
       'data': data,
     });
     // Do not disconnect, wait for "close" message to ack the result receipt.
+    this.win_.removeEventListener('unload', this.boundUnload_);
     // TODO(dvoytenko): Consider taking an action if result acknowledgement
     // does not arrive in some time (3-5s). For instance, we can redirect
     // back or ask the host implementer to take an action.
@@ -275,6 +280,7 @@ export class ActivityWindowPopupHost {
       this.args_ = payload;
       this.connected_ = true;
       this.connectedResolver_(this);
+      this.win_.addEventListener('unload', this.boundUnload_);
     } else if (cmd == 'close') {
       this.disconnect();
     }
@@ -292,6 +298,11 @@ export class ActivityWindowPopupHost {
             allowedHeight < requestedHeight);
       }
     }
+  }
+
+  /** @private */
+  unload_() {
+    this.messenger_.sendCommand('check', {});
   }
 }
 
