@@ -206,7 +206,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         port.open();
         expect(windowOpenStub).to.be.calledOnce;
         expect(windowOpenStub.args[0][1]).to.equal('_blank');
-        expect(port.targetWin_).to.equal(popup);
+        expect(port.getTargetWin()).to.equal(popup);
       });
 
       it('should fallback to redirect if returns null', () => {
@@ -220,7 +220,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(windowOpenStub).to.be.calledTwice;
         expect(windowOpenStub.args[0][1]).to.equal('_blank');
         expect(windowOpenStub.args[1][1]).to.equal('_top');
-        expect(port.targetWin_).to.equal(popup);
+        expect(port.getTargetWin()).to.equal(popup);
       });
 
       it('should fallback to redirect if fails', () => {
@@ -234,7 +234,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(windowOpenStub).to.be.calledTwice;
         expect(windowOpenStub.args[0][1]).to.equal('_blank');
         expect(windowOpenStub.args[1][1]).to.equal('_top');
-        expect(port.targetWin_).to.equal(popup);
+        expect(port.getTargetWin()).to.equal(popup);
       });
 
       it('should reject if all fallbacks fail', () => {
@@ -245,7 +245,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(windowOpenStub).to.be.calledTwice;
         expect(windowOpenStub.args[0][1]).to.equal('_blank');
         expect(windowOpenStub.args[1][1]).to.equal('_top');
-        expect(port.targetWin_).to.be.null;
+        expect(port.getTargetWin()).to.be.null;
         return expect(port.acceptResult()).to.be.eventually
             .rejectedWith(/failed to open window/);
       });
@@ -262,7 +262,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         port.open();
         expect(windowOpenStub).to.be.calledOnce;
         expect(windowOpenStub.args[0][1]).to.equal('_top');
-        expect(port.targetWin_).to.be.null;
+        expect(port.getTargetWin()).to.be.null;
         return expect(port.acceptResult()).to.be.eventually
             .rejectedWith(/failed to open window/);
       });
@@ -330,7 +330,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         popup.close = sandbox.spy();
         port.disconnect();
         expect(popup.close).to.be.calledOnce;
-        expect(port.targetWin_).to.be.null;
+        expect(port.getTargetWin()).to.be.null;
       });
 
       it('should tolerate close popup failures on disconnect', () => {
@@ -338,7 +338,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
           throw new Error('intentional');
         };
         port.disconnect();
-        expect(port.targetWin_).to.be.null;
+        expect(port.getTargetWin()).to.be.null;
       });
 
       it('should not allow target origin until connected', () => {

@@ -110,6 +110,13 @@ export class ActivityWindowPort {
   }
 
   /**
+   * @return {?Window}
+   */
+  getTargetWin() {
+    return this.targetWin_;
+  }
+
+  /**
    * Disconnect the activity binding and cleanup listeners.
    */
   disconnect() {

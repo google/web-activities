@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.4.0 */
+ /** Version: 1.5.0 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -947,6 +947,13 @@ class ActivityWindowPort {
   }
 
   /**
+   * @return {?Window}
+   */
+  getTargetWin() {
+    return this.targetWin_;
+  }
+
+  /**
    * Disconnect the activity binding and cleanup listeners.
    */
   disconnect() {
@@ -1282,7 +1289,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.4.0';
+    this.version = '1.5.0';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1337,6 +1344,7 @@ class ActivityPorts {
    * @param {string} target
    * @param {?Object=} opt_args
    * @param {?ActivityOpenOptions=} opt_options
+   * @return {{targetWin: ?Window}}
    */
   open(requestId, url, target, opt_args, opt_options) {
     const port = new ActivityWindowPort(
@@ -1346,6 +1354,7 @@ class ActivityPorts {
       // the result will never arrive through this port.
       this.consumeResultAll_(requestId, port);
     });
+    return {targetWin: port.getTargetWin()};
   }
 
   /**
