@@ -91,6 +91,7 @@ describes.realWin('ActivityPorts', {}, env => {
     let openStub;
     let port;
     let openPromise, openResolver;
+    let targetWin;
 
     beforeEach(() => {
       port = null;
@@ -102,10 +103,13 @@ describes.realWin('ActivityPorts', {}, env => {
             port = this;
             return openPromise;
           });
+      targetWin = {};
+      sandbox.stub(ActivityWindowPort.prototype, 'getTargetWin',
+          () => targetWin);
     });
 
     it('should open window', () => {
-      ports.open(
+      const res = ports.open(
           'request1',
           'https://example.com/file',
           '_blank',
@@ -119,16 +123,18 @@ describes.realWin('ActivityPorts', {}, env => {
       expect(port.openTarget_).to.equal('_blank');
       expect(port.args_).to.deep.equal({a: 1});
       expect(port.options_).to.deep.equal({width: 300});
+      expect(res.targetWin).to.equal(targetWin);
     });
 
     it('should open window with no args or options', () => {
-      ports.open(
+      const res = ports.open(
           'request1',
           'https://example.com/file',
           '_blank');
       expect(openStub).to.be.calledOnce;
       expect(port.args_).to.be.null;
       expect(port.options_).to.be.null;
+      expect(res.targetWin).to.equal(targetWin);
     });
 
     it('should yield onResult registered before or after popup', () => {

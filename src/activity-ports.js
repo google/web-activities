@@ -93,6 +93,7 @@ export class ActivityPorts {
    * @param {string} target
    * @param {?Object=} opt_args
    * @param {?ActivityOpenOptionsDef=} opt_options
+   * @return {{targetWin: ?Window}}
    */
   open(requestId, url, target, opt_args, opt_options) {
     const port = new ActivityWindowPort(
@@ -102,6 +103,7 @@ export class ActivityPorts {
       // the result will never arrive through this port.
       this.consumeResultAll_(requestId, port);
     });
+    return {targetWin: port.getTargetWin()};
   }
 
   /**
