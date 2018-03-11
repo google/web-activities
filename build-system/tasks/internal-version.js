@@ -24,4 +24,9 @@ const packageVersion = packageJson.version;
 
 // Used to e.g. references the ads binary from the runtime to get
 // version lock.
-exports.VERSION = argv.version ? String(argv.version) : String(packageVersion);
+let version = argv.version ? String(argv.version) : String(packageVersion);
+if (!version.endsWith('.0')) {
+  throw new Error('Version must always end with .0');
+}
+version = version.substring(0, version.length - 2);
+exports.VERSION = version;
