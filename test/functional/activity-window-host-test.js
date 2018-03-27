@@ -383,6 +383,18 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       expect(disconnectStub).to.not.be.called;
     });
 
+    it('should yield "failed" as string', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.failed('broken');
+      expect(sendCommandStub).to.be.calledOnce;
+      expect(sendCommandStub).to.be.calledWith('result', {
+        code: 'failed',
+        data: 'broken',
+      });
+      expect(disconnectStub).to.not.be.called;
+    });
+
     it('should not allow "ready" signal before accept', () => {
       expect(() => host.ready())
           .to.throw(/not accepted/);
@@ -877,6 +889,16 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
       expect(redirectStub).to.be.calledOnce;
       expect(redirectStub).to.be.calledWith(
           returnUrl('failed', 'Error: broken'));
+      expect(disconnectStub).to.not.be.called;
+    });
+
+    it('should yield "failed" as string', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.failed('broken');
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(
+          returnUrl('failed', 'broken'));
       expect(disconnectStub).to.not.be.called;
     });
 
