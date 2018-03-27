@@ -244,6 +244,18 @@ describes.realWin('ActivityIframeHost', {}, env => {
       expect(disconnectStub).to.not.be.called;
     });
 
+    it('should yield "failed" with string', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.failed('broken');
+      expect(sendCommandStub).to.be.calledOnce;
+      expect(sendCommandStub).to.be.calledWith('result', {
+        code: 'failed',
+        data: 'broken',
+      });
+      expect(disconnectStub).to.not.be.called;
+    });
+
     it('should not allow "ready" signal before accept', () => {
       expect(() => host.ready())
           .to.throw(/not accepted/);

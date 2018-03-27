@@ -259,7 +259,7 @@ export class ActivityHostDef {
 
   /**
    * Signals to the activity client that the activity has unrecoverably failed.
-   * @param {!Error} reason
+   * @param {!Error|string} reason
    */
   failed(reason) {}
 
