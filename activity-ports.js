@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.6 */
+ /** Version: 1.7 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -625,13 +625,18 @@ function serializeRequest(request) {
  */
 function createAbortError(win, opt_message) {
   const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
-  let error;
-  if ('DOMException' in win) {
+  let error = null;
+  if (typeof win['DOMException'] == 'function') {
     // TODO(dvoytenko): remove typecast once externs are fixed.
     const constr = /** @type {function(new:DOMException, string, string)} */ (
-        DOMException);
-    error = new constr(message, ABORT_ERR_NAME);
-  } else {
+        win['DOMException']);
+    try {
+      error = new constr(message, ABORT_ERR_NAME);
+    } catch (e) {
+      // Ignore. In particular, `new DOMException()` fails in Edge.
+    }
+  }
+  if (!error) {
     // TODO(dvoytenko): remove typecast once externs are fixed.
     const constr = /** @type {function(new:DOMException, string)} */ (
         Error);
@@ -1067,11 +1072,15 @@ class ActivityWindowPort {
     const features = {
       'height': h,
       'width': w,
-      'left': x,
-      'top': y,
       'resizable': 'yes',
       'scrollbars': 'yes',
     };
+    // Do not set left/top in Edge: it fails.
+    const nav = this.win_.navigator;
+    if (!/Edge/i.test(nav && nav.userAgent)) {
+      features['left'] = x;
+      features['top'] = y;
+    }
     let featuresStr = '';
     for (const f in features) {
       if (featuresStr) {
@@ -1289,7 +1298,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.6';
+    this.version = '1.7';
 
     /** @private @const {!Window} */
     this.win_ = win;
