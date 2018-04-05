@@ -164,6 +164,26 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(features).to.contain('top=0');
       });
 
+      it('should exclude top/left on Edge due to system failures', () => {
+        win = {};
+        win.location = {href: ''};
+        win.navigator = {};
+        win.navigator.userAgent =
+            'Mozilla/5.0 (Windows NT 10.0)' +
+            ' AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135' +
+            ' Safari/537.36 Edge/12.10136';
+        win.screen = {width: 2000, height: 1000};
+        win.open = function() {};
+        windowOpenStub = sandbox.stub(win, 'open');
+        const features = getFeatures();
+        expect(features).to.contain('width=600');
+        expect(features).to.contain('height=600');
+        features.forEach(feature => {
+          expect(feature.indexOf('left')).to.equal(-1, 'left present');
+          expect(feature.indexOf('top')).to.equal(-1, 'top present');
+        });
+      });
+
       it('should default return url', () => {
         win.location.hash = '#aaa';
         const request = getRequest();
@@ -433,8 +453,6 @@ describes.realWin('ActivityWindowPort', {}, env => {
           return port.acceptResult().then(() => {
             throw new Error('must have failed');
           }, reason => {
-            expect(reason).to.be.instanceof(DOMException);
-            expect(reason.code).to.equal(20);
             expect(reason.name).to.equal('AbortError');
             const result = reason.activityResult;
             expect(result.code).to.equal(ActivityResultCode.CANCELED);
@@ -485,8 +503,6 @@ describes.realWin('ActivityWindowPort', {}, env => {
           return port.acceptResult().then(() => {
             throw new Error('must have failed');
           }, reason => {
-            expect(reason).to.be.instanceof(DOMException);
-            expect(reason.code).to.equal(20);
             expect(reason.name).to.equal('AbortError');
             const result = reason.activityResult;
             expect(result.ok).to.be.false;

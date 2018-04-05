@@ -230,11 +230,15 @@ export class ActivityWindowPort {
     const features = {
       'height': h,
       'width': w,
-      'left': x,
-      'top': y,
       'resizable': 'yes',
       'scrollbars': 'yes',
     };
+    // Do not set left/top in Edge: it fails.
+    const nav = this.win_.navigator;
+    if (!/Edge/i.test(nav && nav.userAgent)) {
+      features['left'] = x;
+      features['top'] = y;
+    }
     let featuresStr = '';
     for (const f in features) {
       if (featuresStr) {

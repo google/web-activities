@@ -215,13 +215,18 @@ export function serializeRequest(request) {
  */
 export function createAbortError(win, opt_message) {
   const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
-  let error;
-  if ('DOMException' in win) {
+  let error = null;
+  if (typeof win['DOMException'] == 'function') {
     // TODO(dvoytenko): remove typecast once externs are fixed.
     const constr = /** @type {function(new:DOMException, string, string)} */ (
-        DOMException);
-    error = new constr(message, ABORT_ERR_NAME);
-  } else {
+        win['DOMException']);
+    try {
+      error = new constr(message, ABORT_ERR_NAME);
+    } catch (e) {
+      // Ignore. In particular, `new DOMException()` fails in Edge.
+    }
+  }
+  if (!error) {
     // TODO(dvoytenko): remove typecast once externs are fixed.
     const constr = /** @type {function(new:DOMException, string)} */ (
         Error);

@@ -123,8 +123,6 @@ describes.realWin('ActivityIframePort', {}, env => {
       return port.acceptResult().then(() => {
         throw new Error('must have failed');
       }, reason => {
-        expect(reason).to.be.instanceof(DOMException);
-        expect(reason.code).to.equal(20);
         expect(reason.name).to.equal('AbortError');
         const result = reason.activityResult;
         expect(result.ok).to.be.false;

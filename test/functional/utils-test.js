@@ -286,6 +286,32 @@ describe('utils', () => {
       expect(error.code).to.equal(20);  // ABORT_ERR
       expect(error.name).to.equal('AbortError');
     });
+
+    it('should recover when not DOMException is an object', () => {
+      // This is a situation in IE - DOMException is an object, not a function.
+      const error = utils.createAbortError({
+        'DOMException': {},
+      });
+      expect(() => {throw error;}).to.throw(/AbortError/);
+      expect(error).to.not.be.instanceof(DOMException);
+      expect(error).to.be.instanceof(Error);
+      expect(error.code).to.equal(20);  // ABORT_ERR
+      expect(error.name).to.equal('AbortError');
+    });
+
+    it('should recover when not DOMException constructor fails', () => {
+      // This is a situation in Edge - `new DOMException()` fails.
+      const error = utils.createAbortError({
+        'DOMException': function() {
+          throw new Error('intentional');
+        },
+      });
+      expect(() => {throw error;}).to.throw(/AbortError/);
+      expect(error).to.not.be.instanceof(DOMException);
+      expect(error).to.be.instanceof(Error);
+      expect(error.code).to.equal(20);  // ABORT_ERR
+      expect(error.name).to.equal('AbortError');
+    });
   });
 
   describe('resolveResult', () => {
