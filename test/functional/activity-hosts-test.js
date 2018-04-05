@@ -115,6 +115,15 @@ describes.realWin('ActivityHosts', {}, env => {
         });
       });
 
+      it('should connect redirect host if opener is equal to self', () => {
+        win.opener = win;  // Popup: opener exists, but equals to self.
+        const promise = hosts.connectHost();
+        connectResolve(initialHost);
+        return promise.then(host => {
+          expect(host).to.be.instanceof(ActivityWindowRedirectHost);
+        });
+      });
+
       it('should delegate to another host', () => {
         const other = {};
         win.opener = {};  // Popup: opener exists.

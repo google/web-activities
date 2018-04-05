@@ -1683,7 +1683,8 @@ class ActivityHosts {
     if (this.win_.top != this.win_) {
       // Iframe host.
       host = new ActivityIframeHost(this.win_);
-    } else if (this.win_.opener && !this.win_.opener.closed) {
+    } else if (this.win_.opener && this.win_.opener != this.win_ &&
+          !this.win_.opener.closed) {
       // Window host: popup.
       host = new ActivityWindowPopupHost(this.win_);
     } else {
