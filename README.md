@@ -17,7 +17,7 @@ These APIs are provided within the `ActivityPorts` class.
 A client page can open the activity as an iframe or a standalone page.
 
 To open the activity as an iframe:
-```
+```js
 ports.openIframe(iframe, url, args).then(port => {
   // Check origin properties.
   return port.acceptResult();
@@ -27,7 +27,7 @@ ports.openIframe(iframe, url, args).then(port => {
 ```
 
 To open the activity as a standalone page (popup or redirect):
-```
+```js
 // First setup callback, even if you are not yet starting an activity. This
 // will ensure that you are always prepared to handle redirect results.
 ports.onResult(resultId, port => {
@@ -49,7 +49,7 @@ For details `options`, see `ActivityOpenOptionsDef` type.
 These APIs are provided within the `ActivityHosts` class.
 
 A host page implements the activity by connecting it to the client:
-```
+```js
 activities.connectHost().then(host => {
   // Check origin properties.
   host.accept();
@@ -71,7 +71,7 @@ In the npm package, you can either use the combined `acitivities.js`, or two sep
 
 Include `https://cdn.jsdelivr.net/npm/web-activities/activities.min.js` as a script on your page:
 
-```
+```html
 <script async src="https://cdn.jsdelivr.net/npm/web-activities/activities.min.js"></script>
 
 <script>
