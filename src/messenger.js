@@ -53,6 +53,12 @@ export class Messenger {
     /** @private {?Window} */
     this.target_ = null;
 
+    /** @private {boolean} */
+    this.acceptsPort_ = false;
+
+    /** @private {?MessagePort} */
+    this.port_ = null;
+
     /** @private {?function(string, ?Object)} */
     this.onCommand_ = null;
 
@@ -86,7 +92,12 @@ export class Messenger {
   disconnect() {
     if (this.onCommand_) {
       this.onCommand_ = null;
-      this.win_.removeEventListener('message', this.boundHandleEvent_);
+      if (this.port_) {
+        closePort(this.port_);
+        this.port_ = null;
+      } else {
+        this.win_.removeEventListener('message', this.boundHandleEvent_);
+      }
       if (this.channels_) {
         for (const k in this.channels_) {
           const channelObj = this.channels_[k];
@@ -151,23 +162,58 @@ export class Messenger {
   }
 
   /**
+   * The host sends this message to the client to indicate that it's ready to
+   * start communicating. The client is expected to respond back with the
+   * "start" command. See `sendStartCommand` method.
+   */
+  sendConnectCommand() {
+    this.sendCommand('connect', {'acceptsPort': true});
+  }
+
+  /**
+   * The client sends this message to the host upon receiving the "connect"
+   * message to start the main communication channel. As a payload, the message
+   * will contain the provided start arguments.
+   * @param {?Object} args
+   */
+  sendStartCommand(args) {
+    let channel = null;
+    if (this.acceptsPort_ && typeof this.win_.MessageChannel == 'function') {
+      channel = new this.win_.MessageChannel();
+    }
+    if (channel) {
+      this.sendCommand('start', args, [channel.port2]);
+      // It's critical to switch to port messaging only after "start" has been
+      // sent. Otherwise, it won't be delivered.
+      this.switchToPort_(channel.port1);
+    } else {
+      this.sendCommand('start', args);
+    }
+  }
+
+  /**
    * Sends the specified command from the port to the host or vice versa.
    * @param {string} cmd
    * @param {?Object=} opt_payload
    * @param {?Array=} opt_transfer
    */
   sendCommand(cmd, opt_payload, opt_transfer) {
-    const target = this.getTarget();
-    // Only "connect" command is allowed to use `targetOrigin == '*'`
-    const targetOrigin =
-        cmd == 'connect' ?
-        (this.targetOrigin_ != null ? this.targetOrigin_ : '*') :
-        this.getTargetOrigin();
-    target.postMessage({
+    const data = {
       'sentinel': SENTINEL,
       'cmd': cmd,
       'payload': opt_payload || null,
-    }, targetOrigin, opt_transfer || undefined);
+    };
+    if (this.port_) {
+      this.port_.postMessage(data, opt_transfer || undefined);
+    } else {
+      const target = this.getTarget();
+      // Only "connect" command is allowed to use `targetOrigin == '*'`
+      const targetOrigin =
+          cmd == 'connect' ?
+          (this.targetOrigin_ != null ? this.targetOrigin_ : '*') :
+          this.getTargetOrigin();
+      target.postMessage(data, targetOrigin, opt_transfer || undefined);
+    }
   }
 
   /**
@@ -257,10 +303,32 @@ export class Messenger {
   }
 
   /**
+   * @param {!MessagePort} port
+   * @private
+   */
+  switchToPort_(port) {
+    this.port_ = port;
+    this.port_.onmessage = event => {
+      const data = event.data;
+      const cmd = data && data['cmd'];
+      const payload = data && data['payload'] || null;
+      if (cmd) {
+        this.handleCommand_(cmd, payload, event);
+      }
+    };
+    // No longer needed with port available.
+    this.win_.removeEventListener('message', this.boundHandleEvent_);
+  }
+
+  /**
    * @param {!MessageEvent} event
    * @private
    */
   handleEvent_(event) {
+    if (this.port_) {
+      // Messaging channel has already taken over.
+      return;
+    }
     const data = event.data;
     if (!data || data['sentinel'] != SENTINEL) {
       return;
@@ -291,7 +359,16 @@ export class Messenger {
    * @private
    */
   handleCommand_(cmd, payload, event) {
-    if (cmd == 'msg') {
+    if (cmd == 'connect') {
+      this.acceptsPort_ = payload && payload['acceptsPort'] || false;
+      this.onCommand_(cmd, payload);
+    } else if (cmd == 'start') {
+      const port = event.ports && event.ports[0];
+      if (port) {
+        this.switchToPort_(port);
+      }
+      this.onCommand_(cmd, payload);
+    } else if (cmd == 'msg') {
       if (this.onCustomMessage_ != null && payload != null) {
         this.onCustomMessage_(payload);
       }

@@ -41,7 +41,7 @@
   var ARGS = {
     publicationId: 'scenic',
   };
-  var MAX_IFRAME_HEIGHT = Math.min(200, window.innerHeight - 10);
+  var MAX_IFRAME_HEIGHT = Math.min(280, window.innerHeight - 10);
 
   function whenReady(callback) {
     (window.ACTIVITIES = window.ACTIVITIES || []).push(function(activities) {
@@ -64,7 +64,7 @@
   whenReady(function(activities) {
     console.log('PORT ACTIVITIES: ', activities.version, activities.ports.version);
     activities.ports.onResult('request1', function(port) {
-      port.acceptResult().then(printResult);
+      port.acceptResult().then(printResult, printError);
     });
   });
 
@@ -98,6 +98,12 @@
           });
         });
         port.message({from: 'client'});
+        port.messageChannel('a').then(function(channel) {
+          channel.onmessage = function(e) {
+            console.log('channel message to port: ', e);
+          };
+          channel.postMessage('from port!');
+        });
         port.onResizeRequest(function(height) {
           var allowed = Math.min(height, MAX_IFRAME_HEIGHT);
           iframe.style.height = allowed + 'px';
