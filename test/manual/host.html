@@ -63,12 +63,6 @@
           'Args: ' + JSON.stringify(host.getArgs()) + '\n';
       var origin = host.getTargetOrigin();
       var args = host.getArgs();
-      if (args.publicationId != 'scenic' || origin != 'http://localhost:8000') {
-        console.log('Host arg failure:',
-            'wrong pubid or origin: ' + args.publicationId + '/' + origin);
-        host.failed(new Error('wrong pubid or origin: ' + args.publicationId + '/' + origin));
-        throw new Error('failed checks!');
-      }
       console.log('Accept: ', origin, host.isTargetOriginVerified(), args);
       host.accept();
     }).then(function() {
@@ -76,6 +70,14 @@
         hostParamsEl.textContent += '\nMSG: ' + JSON.stringify(payload);
       });
       host.message({from: 'server'});
+      if (host.isMessagingSupported()) {
+        host.messageChannel('a').then(function(channel) {
+          channel.onmessage = function(e) {
+            console.log('channel message to host: ', e);
+          };
+          channel.postMessage('from host!');
+        });
+      }
       host.setSizeContainer(container);
       host.onResizeComplete(function(height, requestedHeight, overflow) {
         document.body.classList.toggle('overflow', overflow);

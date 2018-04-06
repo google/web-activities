@@ -89,7 +89,7 @@ export class ActivityIframeHost {
     this.connected_ = false;
     this.accepted_ = false;
     this.messenger_.connect(this.handleCommand_.bind(this));
-    this.messenger_.sendCommand('connect');
+    this.messenger_.sendConnectCommand();
     return this.connectedPromise_;
   }
 

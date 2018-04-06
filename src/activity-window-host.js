@@ -101,7 +101,7 @@ export class ActivityWindowPopupHost {
     this.accepted_ = false;
     return this.redirectHost_.connect(opt_request).then(() => {
       this.messenger_.connect(this.handleCommand_.bind(this));
-      this.messenger_.sendCommand('connect');
+      this.messenger_.sendConnectCommand();
       // Give the popup channel ~5 seconds to connect and if it can't,
       // assume that the client is offloaded and proceed with redirect.
       setTimeout(() => {

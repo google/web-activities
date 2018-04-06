@@ -62,6 +62,27 @@ describes.realWin('Messenger', {}, env => {
       expect(removeEventListenerSpy.args[0][1]).to.equal(handler);
     });
 
+    it('should add and remove message listener and open/close port', () => {
+      expect(addEventListenerSpy).to.be.calledOnce;
+      expect(addEventListenerSpy.args[0][0]).to.equal('message');
+      const handler = addEventListenerSpy.args[0][1];
+      expect(handler).to.be.a.function;
+
+      // Switch to port.
+      const port = {
+        close: sandbox.spy(),
+      };
+      messenger.switchToPort_(port);
+      expect(removeEventListenerSpy).to.be.calledOnce;
+      expect(removeEventListenerSpy.args[0][0]).to.equal('message');
+      expect(removeEventListenerSpy.args[0][1]).to.equal(handler);
+
+      // Disconnect.
+      messenger.disconnect();
+      expect(port.close).to.be.calledOnce;
+      expect(removeEventListenerSpy).to.be.calledOnce;
+    });
+
     it('should fail target until connected', () => {
       expect(() => {
         messenger.getTarget();
@@ -80,7 +101,7 @@ describes.realWin('Messenger', {}, env => {
 
     it('should fail sending a command until connected', () => {
       expect(() => {
-        messenger.sendCommand('start', {});
+        messenger.sendStartCommand({});
       }).to.throw(/not connected/);
     });
 
@@ -88,7 +109,7 @@ describes.realWin('Messenger', {}, env => {
       source = {
         postMessage: sandbox.spy(),
       };
-      messenger.sendCommand('start', {a: 1});
+      messenger.sendStartCommand({a: 1});
       expect(source.postMessage).to.be.calledOnce;
       expect(source.postMessage.args[0][0]).to.deep.equal({
         sentinel: '__ACTIVITIES__',
@@ -96,6 +117,54 @@ describes.realWin('Messenger', {}, env => {
         payload: {a: 1},
       });
       expect(source.postMessage.args[0][1]).to.equal('https://example-sp.com');
+      expect(source.postMessage.args[0][2]).to.not.exist;
+      expect(messenger.port_).to.be.null;
+    });
+
+    it('should switch to channel if accepts ports', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      const channel = {
+        port1: {},
+        port2: {},
+      };
+      sandbox.stub(win, 'MessageChannel', () => channel);
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsPort: true,
+        }},
+      });
+      messenger.sendStartCommand({a: 1});
+      expect(source.postMessage).to.be.calledOnce;
+      expect(source.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'start',
+        payload: {a: 1},
+      });
+      expect(source.postMessage.args[0][1]).to.equal('https://example-sp.com');
+      expect(source.postMessage.args[0][2]).to.deep.equal([channel.port2]);
+      expect(messenger.port_).to.equal(channel.port1);
+    });
+
+    it('should ignore accepts ports if channel not supported', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      Object.defineProperty(win, 'MessageChannel', {value: null});
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsPort: true,
+        }},
+      });
+      messenger.sendStartCommand({a: 1});
+      expect(source.postMessage).to.be.calledOnce;
+      expect(source.postMessage.args[0][2]).to.not.exist;
+      expect(messenger.port_).to.be.null;
     });
 
     it('should call an inbound command', () => {
@@ -120,6 +189,74 @@ describes.realWin('Messenger', {}, env => {
       handler({data: {cmd: 'connect'}});
       handler({data: {sentinel: '__OTHER__', cmd: 'connect'}});
       expect(onCommand).to.not.be.called;
+    });
+
+    it('should send a command via window messaging', () => {
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      messenger.sendCommand('other', {a: 1});
+      expect(source.postMessage).to.be.calledOnce;
+      expect(source.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'other',
+        payload: {a: 1},
+      });
+      expect(source.postMessage.args[0][1]).to.equal('https://example-sp.com');
+      expect(source.postMessage.args[0][2]).to.not.exist;
+    });
+
+    it('should send and receive commands via port messaging', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      const port = {
+        postMessage: sandbox.spy(),
+        close: sandbox.spy(),
+      };
+      const channel = {
+        port1: port,
+        port2: {},
+      };
+      sandbox.stub(win, 'MessageChannel', () => channel);
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsPort: true,
+        }},
+      });
+      messenger.sendStartCommand({a: 1});
+      source.postMessage.reset();
+      messenger.sendCommand('other', {a: 1});
+      expect(source.postMessage).to.not.be.called;
+      expect(port.postMessage).to.be.calledOnce;
+      expect(port.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'other',
+        payload: {a: 1},
+      });
+      expect(port.postMessage.args[0][1]).to.not.exist;
+      expect(port.postMessage.args[0][2]).to.not.exist;
+
+      // After switch, event handler is no longer used.
+      onCommand.reset();
+      const event = {
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
+      };
+      handler(event);
+      expect(onCommand).to.not.be.called;
+
+      // But port events are handled.
+      delete event.origin;
+      port.onmessage(event);
+      expect(onCommand).to.be.calledOnce.calledWith('other', {a: 1});
+
+      // Dispose.
+      expect(port.close).to.not.be.called;
+      messenger.disconnect();
+      expect(port.close).to.be.calledOnce;
     });
 
     it('should ignore an inbound command for a wrong origin', () => {
@@ -352,12 +489,14 @@ describes.realWin('Messenger', {}, env => {
     });
 
     it('should allow connect without origin', () => {
-      messenger.sendCommand('connect');
+      messenger.sendConnectCommand();
       expect(target.postMessage).to.be.calledOnce;
       expect(target.postMessage.args[0][0]).to.deep.equal({
         sentinel: '__ACTIVITIES__',
         cmd: 'connect',
-        payload: null,
+        payload: {
+          acceptsPort: true,
+        },
       });
       expect(target.postMessage.args[0][1]).to.equal('*');
     });
@@ -399,6 +538,69 @@ describes.realWin('Messenger', {}, env => {
         messenger.getTargetOrigin();
       }).to.throw(/not connected/);
       expect(onCommand).to.not.be.called;
+    });
+
+    it('should send a command via window messaging', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+      });
+      expect(messenger.isConnected()).to.be.true;
+
+      messenger.sendCommand('other', {a: 1});
+      expect(target.postMessage).to.be.calledOnce;
+      expect(target.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'other',
+        payload: {a: 1},
+      });
+      expect(target.postMessage.args[0][1]).to.equal('https://example-sp.com');
+      expect(target.postMessage.args[0][2]).to.not.exist;
+    });
+
+    it('should send and receive commands via port messaging', () => {
+      const port = {
+        postMessage: sandbox.spy(),
+        close: sandbox.spy(),
+      };
+      const handler = addEventListenerSpy.args[0][1];
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {a: 1}},
+        ports: [port],
+      });
+      expect(messenger.isConnected()).to.be.true;
+
+      messenger.sendCommand('other', {a: 1});
+      expect(target.postMessage).to.not.be.called;
+      expect(port.postMessage).to.be.calledOnce;
+      expect(port.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'other',
+        payload: {a: 1},
+      });
+      expect(port.postMessage.args[0][1]).to.not.exist;
+      expect(port.postMessage.args[0][2]).to.not.exist;
+
+      // Should no longer receive events via window messaging.
+      onCommand.reset();
+      const event = {
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
+      };
+      handler(event);
+      expect(onCommand).to.not.be.called;
+
+      // But port events are handled.
+      delete event.origin;
+      port.onmessage(event);
+      expect(onCommand).to.be.calledOnce.calledWith('other', {a: 1});
+
+      // Dispose.
+      expect(port.close).to.not.be.called;
+      messenger.disconnect();
+      expect(port.close).to.be.calledOnce;
     });
 
     describe('messaging channel', () => {

@@ -193,7 +193,7 @@ export class ActivityIframePort {
     if (cmd == 'connect') {
       // First ever message. Indicates that the receiver is listening.
       this.connected_ = true;
-      this.messenger_.sendCommand('start', this.args_);
+      this.messenger_.sendStartCommand(this.args_);
       this.connectedResolver_();
     } else if (cmd == 'result') {
       // The last message. Indicates that the result has been received.
