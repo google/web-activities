@@ -62,7 +62,7 @@ describes.realWin('Messenger', {}, env => {
       expect(removeEventListenerSpy.args[0][1]).to.equal(handler);
     });
 
-    it('should add and remove message listener and open/close port', () => {
+    it('should keep window message listener when open/close port', () => {
       expect(addEventListenerSpy).to.be.calledOnce;
       expect(addEventListenerSpy.args[0][0]).to.equal('message');
       const handler = addEventListenerSpy.args[0][1];
@@ -72,10 +72,8 @@ describes.realWin('Messenger', {}, env => {
       const port = {
         close: sandbox.spy(),
       };
-      messenger.switchToPort_(port);
-      expect(removeEventListenerSpy).to.be.calledOnce;
-      expect(removeEventListenerSpy.args[0][0]).to.equal('message');
-      expect(removeEventListenerSpy.args[0][1]).to.equal(handler);
+      messenger.switchToChannel_(port);
+      expect(removeEventListenerSpy).to.not.be.called;
 
       // Disconnect.
       messenger.disconnect();
@@ -134,7 +132,7 @@ describes.realWin('Messenger', {}, env => {
       handler({
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
-          acceptsPort: true,
+          acceptsChannel: true,
         }},
       });
       messenger.sendStartCommand({a: 1});
@@ -158,13 +156,88 @@ describes.realWin('Messenger', {}, env => {
       handler({
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
-          acceptsPort: true,
+          acceptsChannel: true,
         }},
       });
       messenger.sendStartCommand({a: 1});
       expect(source.postMessage).to.be.calledOnce;
       expect(source.postMessage.args[0][2]).to.not.exist;
       expect(messenger.port_).to.be.null;
+    });
+
+    it('should reconnect to a new channel if requested', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      const channels = [];
+      sandbox.stub(win, 'MessageChannel', () => {
+        const channel = {
+          port1: {
+            postMessage: sandbox.spy(),
+            close: sandbox.spy(),
+          },
+          port2: {
+            postMessage: sandbox.spy(),
+            close: sandbox.spy(),
+          },
+        };
+        channels.push(channel);
+        return channel;
+      });
+      source = {
+        postMessage: sandbox.spy(),
+      };
+
+      // Connect for the first time.
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsChannel: true,
+        }},
+      });
+      messenger.sendStartCommand({a: 1});
+      expect(source.postMessage).to.be.calledOnce;
+      expect(source.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'start',
+        payload: {a: 1},
+      });
+      expect(source.postMessage.args[0][1]).to.equal('https://example-sp.com');
+      expect(source.postMessage.args[0][2]).to.deep.equal([channels[0].port2]);
+      expect(messenger.port_).to.equal(channels[0].port1);
+
+      // A simple message in the first connection.
+      expect(channels[0].port1.postMessage).to.not.be.called;
+      messenger.sendCommand('other1');
+      expect(channels[0].port1.postMessage).to.be.calledOnce;
+      expect(channels[0].port1.postMessage.args[0][0].cmd).to.equal('other1');
+      expect(source.postMessage).to.be.calledOnce;  // Didn't change.
+
+      // Connect again and repeat everything again.
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsChannel: true,
+        }},
+      });
+      messenger.sendStartCommand({c: 3});
+      expect(source.postMessage).to.be.calledTwice;  // New call.
+      expect(source.postMessage.args[1][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'start',
+        payload: {c: 3},
+      });
+      expect(source.postMessage.args[1][1]).to.equal('https://example-sp.com');
+      expect(source.postMessage.args[1][2]).to.deep.equal([channels[1].port2]);
+      expect(messenger.port_).to.equal(channels[1].port1);
+      expect(channels[0].port1.close).to.be.calledOnce;  // Disconnect old port.
+      expect(channels[1].port1.close).to.not.be.called;
+
+      // A simple message in the first connection.
+      expect(channels[1].port1.postMessage).to.not.be.called;
+      messenger.sendCommand('other2');
+      expect(channels[1].port1.postMessage).to.be.calledOnce;
+      expect(channels[1].port1.postMessage.args[0][0].cmd).to.equal('other2');
+      expect(source.postMessage).to.be.calledTwice;  // Didn't change.
+      expect(channels[0].port1.postMessage).to.be.calledOnce;  // Didn't change.
     });
 
     it('should call an inbound command', () => {
@@ -223,7 +296,7 @@ describes.realWin('Messenger', {}, env => {
       handler({
         origin: 'https://example-sp.com',
         data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
-          acceptsPort: true,
+          acceptsChannel: true,
         }},
       });
       messenger.sendStartCommand({a: 1});
@@ -257,6 +330,69 @@ describes.realWin('Messenger', {}, env => {
       expect(port.close).to.not.be.called;
       messenger.disconnect();
       expect(port.close).to.be.calledOnce;
+    });
+
+    it('should reconnect to a new channel', () => {
+      const handler = addEventListenerSpy.args[0][1];
+      const port = {
+        postMessage: sandbox.spy(),
+        close: sandbox.spy(),
+      };
+      const channel = {
+        port1: port,
+        port2: {},
+      };
+      sandbox.stub(win, 'MessageChannel', () => channel);
+      source = {
+        postMessage: sandbox.spy(),
+      };
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsChannel: true,
+        }},
+      });
+      messenger.sendStartCommand({a: 1});
+      source.postMessage.reset();
+      messenger.sendCommand('other', {a: 1});
+      expect(source.postMessage).to.not.be.called;
+      expect(port.postMessage).to.be.calledOnce;
+      expect(port.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'other',
+        payload: {a: 1},
+      });
+      expect(port.postMessage.args[0][1]).to.not.exist;
+      expect(port.postMessage.args[0][2]).to.not.exist;
+
+      // After switch, event handler is no longer used.
+      onCommand.reset();
+      const event = {
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'other', payload: {a: 1}},
+      };
+      handler(event);
+      expect(onCommand).to.not.be.called;
+
+      // The 'start' commands are still handled.
+      onCommand.reset();
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'start', payload: {}},
+      });
+      expect(onCommand).to.be.calledOnce;
+
+      // The 'connect' commands are still handled.
+      onCommand.reset();
+      handler({
+        origin: 'https://example-sp.com',
+        data: {sentinel: '__ACTIVITIES__', cmd: 'connect', payload: {
+          acceptsChannel: true,
+        }},
+      });
+      expect(onCommand).to.be.calledOnce;
+      expect(port.close).to.be.calledOnce;  // Port is disconnected.
+      expect(messenger.port_).to.be.null;
     });
 
     it('should ignore an inbound command for a wrong origin', () => {
@@ -495,7 +631,7 @@ describes.realWin('Messenger', {}, env => {
         sentinel: '__ACTIVITIES__',
         cmd: 'connect',
         payload: {
-          acceptsPort: true,
+          acceptsChannel: true,
         },
       });
       expect(target.postMessage.args[0][1]).to.equal('*');

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.8 */
+ /** Version: 1.9 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -305,7 +305,7 @@ class Messenger {
     this.target_ = null;
 
     /** @private {boolean} */
-    this.acceptsPort_ = false;
+    this.acceptsChannel_ = false;
 
     /** @private {?MessagePort} */
     this.port_ = null;
@@ -346,9 +346,8 @@ class Messenger {
       if (this.port_) {
         closePort(this.port_);
         this.port_ = null;
-      } else {
-        this.win_.removeEventListener('message', this.boundHandleEvent_);
       }
+      this.win_.removeEventListener('message', this.boundHandleEvent_);
       if (this.channels_) {
         for (const k in this.channels_) {
           const channelObj = this.channels_[k];
@@ -418,7 +417,7 @@ class Messenger {
    * "start" command. See `sendStartCommand` method.
    */
   sendConnectCommand() {
-    this.sendCommand('connect', {'acceptsPort': true});
+    this.sendCommand('connect', {'acceptsChannel': true});
   }
 
   /**
@@ -429,14 +428,14 @@ class Messenger {
    */
   sendStartCommand(args) {
     let channel = null;
-    if (this.acceptsPort_ && typeof this.win_.MessageChannel == 'function') {
+    if (this.acceptsChannel_ && typeof this.win_.MessageChannel == 'function') {
       channel = new this.win_.MessageChannel();
     }
     if (channel) {
       this.sendCommand('start', args, [channel.port2]);
       // It's critical to switch to port messaging only after "start" has been
       // sent. Otherwise, it won't be delivered.
-      this.switchToPort_(channel.port1);
+      this.switchToChannel_(channel.port1);
     } else {
       this.sendCommand('start', args);
     }
@@ -557,7 +556,10 @@ class Messenger {
    * @param {!MessagePort} port
    * @private
    */
-  switchToPort_(port) {
+  switchToChannel_(port) {
+    if (this.port_) {
+      closePort(this.port_);
+    }
     this.port_ = port;
     this.port_.onmessage = event => {
       const data = event.data;
@@ -567,8 +569,9 @@ class Messenger {
         this.handleCommand_(cmd, payload, event);
       }
     };
-    // No longer needed with port available.
-    this.win_.removeEventListener('message', this.boundHandleEvent_);
+    // Even though all messaging will switch to ports, the window-based message
+    // listener will be preserved just in case the host is refreshed and needs
+    // another connection.
   }
 
   /**
@@ -576,16 +579,18 @@ class Messenger {
    * @private
    */
   handleEvent_(event) {
-    if (this.port_) {
-      // Messaging channel has already taken over.
-      return;
-    }
     const data = event.data;
     if (!data || data['sentinel'] != SENTINEL) {
       return;
     }
-    const origin = /** @type {string} */ (event.origin);
     const cmd = data['cmd'];
+    if (this.port_ && cmd != 'connect' && cmd != 'start') {
+      // Messaging channel has already taken over. However, the "connect" and
+      // "start" commands are allowed to proceed in case re-connection is
+      // requested.
+      return;
+    }
+    const origin = /** @type {string} */ (event.origin);
     const payload = data['payload'] || null;
     if (this.targetOrigin_ == null && cmd == 'start') {
       this.targetOrigin_ = origin;
@@ -611,12 +616,18 @@ class Messenger {
    */
   handleCommand_(cmd, payload, event) {
     if (cmd == 'connect') {
-      this.acceptsPort_ = payload && payload['acceptsPort'] || false;
+      if (this.port_) {
+        // In case the port has already been open - close it to reopen it
+        // again later.
+        closePort(this.port_);
+        this.port_ = null;
+      }
+      this.acceptsChannel_ = payload && payload['acceptsChannel'] || false;
       this.onCommand_(cmd, payload);
     } else if (cmd == 'start') {
       const port = event.ports && event.ports[0];
       if (port) {
-        this.switchToPort_(port);
+        this.switchToChannel_(port);
       }
       this.onCommand_(cmd, payload);
     } else if (cmd == 'msg') {
@@ -1659,7 +1670,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.8';
+    this.version = '1.9';
 
     /** @private @const {!Window} */
     this.win_ = win;
