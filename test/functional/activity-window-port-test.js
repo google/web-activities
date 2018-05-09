@@ -62,7 +62,11 @@ describes.realWin('ActivityWindowPort', {}, env => {
     let popup;
 
     beforeEach(() => {
-      popup = {};
+      popup = {
+        location: {
+          replace: sandbox.spy(),
+        },
+      };
       openFunc = () => popup;
       windowOpenStub = sandbox.stub(win, 'open',
           function(url, target, features) {
@@ -225,6 +229,8 @@ describes.realWin('ActivityWindowPort', {}, env => {
       it('should open with the right target', () => {
         port.open();
         expect(windowOpenStub).to.be.calledOnce;
+        expect(windowOpenStub.args[0][0])
+            .to.contain('https://example-sp.com/popup#');
         expect(windowOpenStub.args[0][1]).to.equal('_blank');
         expect(port.getTargetWin()).to.equal(popup);
       });
@@ -285,6 +291,93 @@ describes.realWin('ActivityWindowPort', {}, env => {
         expect(port.getTargetWin()).to.be.null;
         return expect(port.acceptResult()).to.be.eventually
             .rejectedWith(/failed to open window/);
+      });
+
+      describe('popup open in IE', () => {
+        beforeEach(() => {
+          Object.defineProperty(win.navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 7.0;' +
+                ' InfoPath.3; .NET CLR 3.1.40767; Trident/6.0; en-IN)',
+          });
+        });
+
+        it('should open via blank on IE', () => {
+          port.open();
+          expect(windowOpenStub).to.be.calledOnce;
+          expect(windowOpenStub.args[0][0]).to.equal('');
+          expect(windowOpenStub.args[0][1]).to.equal('_blank');
+          expect(port.getTargetWin()).to.equal(popup);
+          expect(popup.location.replace).to.be.calledOnce;
+          expect(popup.location.replace.args[0][0])
+              .to.contain('https://example-sp.com/popup#');
+        });
+
+        it('should workaround blank open returning null', () => {
+          openFunc = (url, target) => {
+            if (target == '_blank' && url == '') {
+              return null;
+            }
+            return popup;
+          };
+          port.open();
+          expect(windowOpenStub).to.be.calledTwice;
+          expect(windowOpenStub.args[0][0]).to.equal('');
+          expect(windowOpenStub.args[0][1]).to.equal('_blank');
+          expect(windowOpenStub.args[1][0])
+              .to.contain('https://example-sp.com/popup#');
+          expect(windowOpenStub.args[1][1]).to.equal('_blank');
+          expect(port.getTargetWin()).to.equal(popup);
+          expect(popup.location.replace).to.not.be.called;
+        });
+
+        it('should tolerate failures from blank open', () => {
+          openFunc = (url, target) => {
+            if (target == '_blank' && url == '') {
+              throw new Error('intentional');
+            }
+            return popup;
+          };
+          port.open();
+          expect(windowOpenStub).to.be.calledTwice;
+          expect(windowOpenStub.args[0][0]).to.equal('');
+          expect(windowOpenStub.args[0][1]).to.equal('_blank');
+          expect(windowOpenStub.args[1][0])
+              .to.contain('https://example-sp.com/popup#');
+          expect(windowOpenStub.args[1][1]).to.equal('_blank');
+          expect(port.getTargetWin()).to.equal(popup);
+          expect(popup.location.replace).to.not.be.called;
+        });
+
+        it('should tolerate failures from location replace', () => {
+          const replaceSpy = sandbox.spy();
+          popup.location.replace = () => {
+            replaceSpy();
+            throw new Error('intentional');
+          };
+          port.open();
+          expect(replaceSpy).to.be.calledOnce;
+          expect(windowOpenStub).to.be.calledTwice;
+          expect(windowOpenStub.args[0][0]).to.equal('');
+          expect(windowOpenStub.args[0][1]).to.equal('_blank');
+          expect(windowOpenStub.args[1][0])
+              .to.contain('https://example-sp.com/popup#');
+          expect(windowOpenStub.args[1][1]).to.equal('_blank');
+          expect(port.getTargetWin()).to.equal(popup);
+        });
+
+        it('should ignore popup for redirect', () => {
+          port = new ActivityWindowPort(
+              win,
+              'request1',
+              'https://example-sp.com/popup',
+              '_top');
+          port.open();
+          expect(windowOpenStub).to.be.calledOnce;
+          expect(windowOpenStub.args[0][0])
+              .to.contain('https://example-sp.com/popup#');
+          expect(windowOpenStub.args[0][1]).to.equal('_top');
+          expect(popup.location.replace).to.not.be.called;
+        });
       });
     });
 
