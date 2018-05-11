@@ -185,6 +185,7 @@ export class ActivityWindowPort {
     // As such, this option is only currently implemented for IE.
     if (openTarget != '_top') {
       const nav = this.win_.navigator;
+      // MSIE is the User Agent for IE browsers.
       const openViaBlank = /MSIE/i.test(nav && nav.userAgent);
       if (openViaBlank) {
         try {
