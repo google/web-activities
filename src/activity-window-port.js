@@ -173,15 +173,46 @@ export class ActivityWindowPort {
     }
 
     // Open the window.
+    let targetWin;
+    let openTarget = this.openTarget_;
+
+    // IE often returns `null` from the `window.open` API for a cross-origin
+    // target URL, making it impossible to set up messaging. The best path is
+    // to first open a blank window and then replace its location to the target
+    // url. This, however, needs to be done very carefully - if the browser
+    // instead forces redirect to "about:blank", the page's JS context will be
+    // destroy and it may fail to change the location to the target URL.
+    // As such, this option is only currently implemented for IE.
+    if (openTarget != '_top') {
+      const nav = this.win_.navigator;
+      // MSIE is the User Agent for IE browsers.
+      const openViaBlank = /Trident|MSIE|IEMobile/i.test(nav && nav.userAgent);
+      if (openViaBlank) {
+        try {
+          targetWin = this.win_.open('', openTarget, featuresStr);
+        } catch (e) {
+          // Ignore.
+        }
+        if (targetWin) {
+          try {
+            targetWin.location.replace(url);
+          } catch (e) {
+            // Ignore. Reset window to repeat opening.
+            targetWin = null;
+          }
+        }
+      }
+    }
+
     // Try first with the specified target. If we're inside the WKWebView or
     // a similar environments, this method is expected to fail by default for
     // all targets except `_top`.
-    let targetWin;
-    let openTarget = this.openTarget_;
-    try {
-      targetWin = this.win_.open(url, openTarget, featuresStr);
-    } catch (e) {
-      // Ignore.
+    if (!targetWin) {
+      try {
+        targetWin = this.win_.open(url, openTarget, featuresStr);
+      } catch (e) {
+        // Ignore.
+      }
     }
     // Then try with `_top` target.
     if (!targetWin && openTarget != '_top') {
