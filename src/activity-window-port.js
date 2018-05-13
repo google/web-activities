@@ -173,11 +173,20 @@ export class ActivityWindowPort {
     }
 
     // Open the window.
+    let targetWin;
+    let openTarget = this.openTarget_;
+    // IE does not support CORS popups - the popup has to fallback to redirect
+    // mode.
+    if (openTarget != '_top') {
+      // MSIE and Trident are typical user agents for IE browsers.
+      const nav = this.win_.navigator;
+      if (/Trident|MSIE|IEMobile/i.test(nav && nav.userAgent)) {
+        openTarget = '_top';
+      }
+    }
     // Try first with the specified target. If we're inside the WKWebView or
     // a similar environments, this method is expected to fail by default for
     // all targets except `_top`.
-    let targetWin;
-    let openTarget = this.openTarget_;
     try {
       targetWin = this.win_.open(url, openTarget, featuresStr);
     } catch (e) {
