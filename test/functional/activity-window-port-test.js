@@ -286,6 +286,17 @@ describes.realWin('ActivityWindowPort', {}, env => {
         return expect(port.acceptResult()).to.be.eventually
             .rejectedWith(/failed to open window/);
       });
+
+      it('should fallback to redirect on IE', () => {
+        Object.defineProperty(win.navigator, 'userAgent', {
+          value: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 7.0;' +
+              ' InfoPath.3; .NET CLR 3.1.40767; Trident/6.0; en-IN)',
+        });
+        port.open();
+        expect(windowOpenStub).to.be.calledOnce;
+        expect(windowOpenStub.args[0][1]).to.equal('_top');
+        expect(port.getTargetWin()).to.equal(popup);
+      });
     });
 
     describe('popup opened', () => {
