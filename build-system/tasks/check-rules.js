@@ -154,8 +154,6 @@ var forbiddenTermsSrcInclusive = {
   '\\.scrollY(?!_)': bannedTermsHelpString,
   '\\.pageXOffset(?!_)': bannedTermsHelpString,
   '\\.pageYOffset(?!_)': bannedTermsHelpString,
-  '\\.innerWidth(?!_)': bannedTermsHelpString,
-  '\\.innerHeight(?!_)': bannedTermsHelpString,
   '\\.scrollingElement(?!_)': bannedTermsHelpString,
   '\\.computeCTM(?!_)': bannedTermsHelpString,
   '\\.scrollBy\\(': bannedTermsHelpString,

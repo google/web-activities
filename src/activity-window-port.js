@@ -224,14 +224,24 @@ export class ActivityWindowPort {
    */
   buildFeatures_() {
     const screen = this.win_.screen;
-    let w = Math.floor(Math.min(600, screen.width * 0.9));
-    let h = Math.floor(Math.min(600, screen.height * 0.9));
+    const availWidth = screen.availWidth || screen.width;
+    const availHeight = screen.availHeight || screen.height;
+    const maxWidth = Math.max(
+        this.win_.innerWidth || availWidth,
+        availWidth -
+        Math.max(0, (this.win_.outerWidth - this.win_.innerWidth) || 0));
+    const maxHeight = Math.max(
+        this.win_.innerHeight || availHeight,
+        availHeight -
+        Math.max(0, (this.win_.outerHeight - this.win_.innerHeight) || 0));
+    let w = Math.floor(Math.min(600, maxWidth * 0.9));
+    let h = Math.floor(Math.min(600, maxHeight * 0.9));
     if (this.options_) {
       if (this.options_.width) {
-        w = Math.min(this.options_.width, screen.width);
+        w = Math.min(this.options_.width, maxWidth);
       }
       if (this.options_.height) {
-        h = Math.min(this.options_.height, screen.height);
+        h = Math.min(this.options_.height, maxHeight);
       }
     }
     const x = Math.floor((screen.width - w) / 2);
