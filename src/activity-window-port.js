@@ -227,11 +227,11 @@ export class ActivityWindowPort {
     const availWidth = screen.availWidth || screen.width;
     const availHeight = screen.availHeight || screen.height;
     const maxWidth = Math.max(
-        this.win_.innerWidth || availWidth,
+        this.win_.innerWidth * 0.5 || availWidth,
         availWidth -
         Math.max(0, (this.win_.outerWidth - this.win_.innerWidth) || 0));
     const maxHeight = Math.max(
-        this.win_.innerHeight || availHeight,
+        this.win_.innerHeight * 0.5 || availHeight,
         availHeight -
         Math.max(0, (this.win_.outerHeight - this.win_.innerHeight) || 0));
     let w = Math.floor(Math.min(600, maxWidth * 0.9));
