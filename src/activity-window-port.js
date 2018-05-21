@@ -223,6 +223,9 @@ export class ActivityWindowPort {
    * @private
    */
   buildFeatures_() {
+    // The max width and heights are calculated as following:
+    // MaxSize = AvailSize - ControlsSize
+    // ControlsSize = OuterSize - InnerSize
     const screen = this.win_.screen;
     const availWidth = screen.availWidth || screen.width;
     const availHeight = screen.availHeight || screen.height;
