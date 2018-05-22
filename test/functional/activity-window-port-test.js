@@ -90,8 +90,30 @@ describes.realWin('ActivityWindowPort', {}, env => {
     });
 
     describe('features and options', () => {
+      beforeEach(() => {
+        win.innerHeight = 500;
+        win.innerWidth = 600;
+        win.outerHeight = 500;
+        win.outerWidth = 600;
+      });
 
       function getFeatures(options) {
+        win.innerHeight = Math.min(
+            win.innerHeight,
+            win.screen.height,
+            win.screen.availHeight || win.screen.height);
+        win.outerHeight = Math.min(
+            win.outerHeight,
+            win.screen.height,
+            win.screen.availHeight || win.screen.height);
+        win.innerWidth = Math.min(
+            win.innerWidth,
+            win.screen.width,
+            win.screen.availWidth || win.screen.width);
+        win.outerWidth = Math.min(
+            win.outerWidth,
+            win.screen.width,
+            win.screen.availWidth || win.screen.width);
         port = new ActivityWindowPort(
             win,
             'request1',
@@ -102,6 +124,15 @@ describes.realWin('ActivityWindowPort', {}, env => {
         port.open();
         const featuresStr = windowOpenStub.args[0][2];
         return featuresStr.split(',');
+      }
+
+      function getFeaturesMap(options) {
+        const map = {};
+        getFeatures(options).forEach(line => {
+          const keyValue = line.split('=');
+          map[keyValue[0]] = keyValue[1];
+        });
+        return map;
       }
 
       function getUrl(options, opt_url) {
@@ -130,20 +161,20 @@ describes.realWin('ActivityWindowPort', {}, env => {
 
       it('should build features with big screen', () => {
         win.screen = {width: 2000, height: 1000};
-        const features = getFeatures();
-        expect(features).to.contain('width=600');
-        expect(features).to.contain('height=600');
-        expect(features).to.contain('left=700');  // (2000 - 600) / 2
-        expect(features).to.contain('top=200');  // (1000 - 600) / 2
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('600');
+        expect(features['height']).to.equal('600');
+        expect(features['left']).to.equal('700');  // (2000 - 600) / 2
+        expect(features['top']).to.equal('200');  // (1000 - 600) / 2
       });
 
       it('should build features with small screen', () => {
         win.screen = {width: 300, height: 500};
-        const features = getFeatures();
-        expect(features).to.contain('width=270');  // 300 * 0.9
-        expect(features).to.contain('height=450');  // 500 * 0.9
-        expect(features).to.contain('left=15');  // (300 - 270) / 2
-        expect(features).to.contain('top=25');  // (500 - 450) / 2
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('270');  // 300 * 0.9
+        expect(features['height']).to.equal('450');  // 500 * 0.9
+        expect(features['left']).to.equal('15');  // (300 - 270) / 2
+        expect(features['top']).to.equal('25');  // (500 - 450) / 2
       });
 
       it('should override width and height', () => {
@@ -175,13 +206,88 @@ describes.realWin('ActivityWindowPort', {}, env => {
         win.screen = {width: 2000, height: 1000};
         win.open = function() {};
         windowOpenStub = sandbox.stub(win, 'open');
-        const features = getFeatures();
-        expect(features).to.contain('width=600');
-        expect(features).to.contain('height=600');
-        features.forEach(feature => {
-          expect(feature.indexOf('left')).to.equal(-1, 'left present');
-          expect(feature.indexOf('top')).to.equal(-1, 'top present');
-        });
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('600');
+        expect(features['height']).to.equal('600');
+        expect(features['left']).to.be.undefined;
+        expect(features['top']).to.be.undefined;
+      });
+
+      it('should base features from available screen size if available', () => {
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('540');  // 600 * 0.9
+        expect(features['height']).to.equal('450');  // 500 * 0.9
+        expect(features['left']).to.equal('730');  // (2000 - 540) / 2
+        expect(features['top']).to.equal('275');  // (1000 - 450) / 2
+      });
+
+      it('should limit the specified width and height to avail screen', () => {
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        const features = getFeaturesMap({width: 1000, height: 2000});
+        expect(features['width']).to.equal('600');
+        expect(features['height']).to.equal('500');
+        // Top/left are still calculated based in the full screen.
+        expect(features['left']).to.equal('700');  // (2000 - 600) / 2
+        expect(features['top']).to.equal('250');  // (1000 - 500) / 2
+      });
+
+      it('should adjust features based on inner/outer delta', () => {
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        win.outerWidth = 500;
+        win.innerWidth = 400;
+        win.outerHeight = 400;
+        win.innerHeight = 320;
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('450');  // (600 - 100) * 0.9
+        expect(features['height']).to.equal('378');  // (500 - 80) * 0.9
+      });
+
+      it('should tolerate undefined outer size', () => {
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        win.outerWidth = undefined;
+        win.innerWidth = 400;
+        win.outerHeight = undefined;
+        win.innerHeight = 320;
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('540');  // 600 * 0.9
+        expect(features['height']).to.equal('450');  // 500 * 0.9
+      });
+
+      it('should tolerate undefined inner size', () => {
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        win.outerWidth = undefined;
+        win.innerWidth = undefined;
+        win.outerHeight = undefined;
+        win.innerHeight = undefined;
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('540');  // 600 * 0.9
+        expect(features['height']).to.equal('450');  // 500 * 0.9
       });
 
       it('should default return url', () => {
