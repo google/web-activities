@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.9 */
+ /** Version: 1.10 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1670,7 +1670,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.9';
+    this.version = '1.10';
 
     /** @private @const {!Window} */
     this.win_ = win;

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.9 */
+ /** Version: 1.10 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1760,7 +1760,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.9';
+    this.version = '1.10';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2135,11 +2135,20 @@ class ActivityWindowPort {
     }
 
     // Open the window.
+    let targetWin;
+    let openTarget = this.openTarget_;
+    // IE does not support CORS popups - the popup has to fallback to redirect
+    // mode.
+    if (openTarget != '_top') {
+      // MSIE and Trident are typical user agents for IE browsers.
+      const nav = this.win_.navigator;
+      if (/Trident|MSIE|IEMobile/i.test(nav && nav.userAgent)) {
+        openTarget = '_top';
+      }
+    }
     // Try first with the specified target. If we're inside the WKWebView or
     // a similar environments, this method is expected to fail by default for
     // all targets except `_top`.
-    let targetWin;
-    let openTarget = this.openTarget_;
     try {
       targetWin = this.win_.open(url, openTarget, featuresStr);
     } catch (e) {
@@ -2176,15 +2185,28 @@ class ActivityWindowPort {
    * @private
    */
   buildFeatures_() {
+    // The max width and heights are calculated as following:
+    // MaxSize = AvailSize - ControlsSize
+    // ControlsSize = OuterSize - InnerSize
     const screen = this.win_.screen;
-    let w = Math.floor(Math.min(600, screen.width * 0.9));
-    let h = Math.floor(Math.min(600, screen.height * 0.9));
+    const availWidth = screen.availWidth || screen.width;
+    const availHeight = screen.availHeight || screen.height;
+    const maxWidth = Math.max(
+        this.win_.innerWidth * 0.5 || availWidth,
+        availWidth -
+        Math.max(0, (this.win_.outerWidth - this.win_.innerWidth) || 0));
+    const maxHeight = Math.max(
+        this.win_.innerHeight * 0.5 || availHeight,
+        availHeight -
+        Math.max(0, (this.win_.outerHeight - this.win_.innerHeight) || 0));
+    let w = Math.floor(Math.min(600, maxWidth * 0.9));
+    let h = Math.floor(Math.min(600, maxHeight * 0.9));
     if (this.options_) {
       if (this.options_.width) {
-        w = Math.min(this.options_.width, screen.width);
+        w = Math.min(this.options_.width, maxWidth);
       }
       if (this.options_.height) {
-        h = Math.min(this.options_.height, screen.height);
+        h = Math.min(this.options_.height, maxHeight);
       }
     }
     const x = Math.floor((screen.width - w) / 2);
@@ -2418,7 +2440,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.9';
+    this.version = '1.10';
 
     /** @private @const {!Window} */
     this.win_ = win;
