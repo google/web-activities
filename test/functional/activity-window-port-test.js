@@ -25,6 +25,11 @@ import {
   parseRequest,
 } from '../../src/utils';
 
+const EDGE_USER_AGENT =
+    'Mozilla/5.0 (Windows NT 10.0)' +
+    ' AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135' +
+    ' Safari/537.36 Edge/12.10136';
+
 
 describes.realWin('ActivityWindowPort', {}, env => {
   let win;
@@ -199,10 +204,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
         win = {};
         win.location = {href: ''};
         win.navigator = {};
-        win.navigator.userAgent =
-            'Mozilla/5.0 (Windows NT 10.0)' +
-            ' AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135' +
-            ' Safari/537.36 Edge/12.10136';
+        win.navigator.userAgent = EDGE_USER_AGENT;
         win.screen = {width: 2000, height: 1000};
         win.open = function() {};
         windowOpenStub = sandbox.stub(win, 'open');
@@ -243,6 +245,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       });
 
       it('should adjust features based on inner/outer delta', () => {
+        sandbox.stub(ActivityWindowPort.prototype, 'isTopWindow_', () => true);
         win.screen = {
           width: 2000,
           height: 1000,
@@ -256,6 +259,59 @@ describes.realWin('ActivityWindowPort', {}, env => {
         const features = getFeaturesMap();
         expect(features['width']).to.equal('450');  // (600 - 100) * 0.9
         expect(features['height']).to.equal('378');  // (500 - 80) * 0.9
+      });
+
+      it('should limit adjustments for inner/outer delta', () => {
+        // This is a very degenerate case where screen's available height is
+        // very small.
+        sandbox.stub(ActivityWindowPort.prototype, 'isTopWindow_', () => true);
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 100,
+        };
+        win.outerHeight = 100;
+        win.innerHeight = 20;
+        const features = getFeaturesMap();
+        expect(features['height']).to.equal('45');  // At least 50% is given.
+      });
+
+      it('should ignore inner/outer delta in iframes', () => {
+        sandbox.stub(ActivityWindowPort.prototype, 'isTopWindow_', () => false);
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        win.outerWidth = 500;
+        win.innerWidth = 400;
+        win.outerHeight = 400;
+        win.innerHeight = 320;
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('540');  // 600 * 0.9
+        expect(features['height']).to.equal('450');  // 500 * 0.9
+      });
+
+      it('should adjust Edge controls size in iframes', () => {
+        Object.defineProperty(win.navigator, 'userAgent', {
+          value: EDGE_USER_AGENT,
+        });
+        sandbox.stub(ActivityWindowPort.prototype, 'isTopWindow_', () => false);
+        win.screen = {
+          width: 2000,
+          height: 1000,
+          availWidth: 600,
+          availHeight: 500,
+        };
+        win.outerWidth = 500;
+        win.innerWidth = 400;
+        win.outerHeight = 400;
+        win.innerHeight = 320;
+        const features = getFeaturesMap();
+        expect(features['width']).to.equal('450');  // Adjusted for Edge.
+        expect(features['height']).to.equal('360');  // Adjusted for Edge.
       });
 
       it('should tolerate undefined outer size', () => {
