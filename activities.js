@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.10 */
+ /** Version: 1.11 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1760,7 +1760,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.10';
+    this.version = '1.11';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2191,14 +2191,26 @@ class ActivityWindowPort {
     const screen = this.win_.screen;
     const availWidth = screen.availWidth || screen.width;
     const availHeight = screen.availHeight || screen.height;
-    const maxWidth = Math.max(
-        this.win_.innerWidth * 0.5 || availWidth,
-        availWidth -
-        Math.max(0, (this.win_.outerWidth - this.win_.innerWidth) || 0));
-    const maxHeight = Math.max(
-        this.win_.innerHeight * 0.5 || availHeight,
-        availHeight -
-        Math.max(0, (this.win_.outerHeight - this.win_.innerHeight) || 0));
+    const isTop = this.isTopWindow_();
+    const nav = this.win_.navigator;
+    const isEdge = /Edge/i.test(nav && nav.userAgent);
+    // Limit controls to 100px width and height. Notice that it's only
+    // possible to calculate controls size in the top window, not in iframes.
+    // Notice that the Edge behavior is somewhat unique. If we can't find the
+    // right width/height, it will launch in the full-screen. Other browsers
+    // deal with such cases more gracefully.
+    const controlsWidth =
+        isTop && this.win_.outerWidth > this.win_.innerWidth ?
+        Math.min(100, this.win_.outerWidth - this.win_.innerWidth) :
+        (isEdge ? 100 : 0);
+    const controlsHeight =
+        isTop && this.win_.outerHeight > this.win_.innerHeight ?
+        Math.min(100, this.win_.outerHeight - this.win_.innerHeight) :
+        (isEdge ? 100 : 0);
+    // With all the adjustments, at least 50% of the available width/height
+    // should be made available to a popup.
+    const maxWidth = Math.max(availWidth - controlsWidth, availWidth * 0.5);
+    const maxHeight = Math.max(availHeight - controlsHeight, availHeight * 0.5);
     let w = Math.floor(Math.min(600, maxWidth * 0.9));
     let h = Math.floor(Math.min(600, maxHeight * 0.9));
     if (this.options_) {
@@ -2218,8 +2230,7 @@ class ActivityWindowPort {
       'scrollbars': 'yes',
     };
     // Do not set left/top in Edge: it fails.
-    const nav = this.win_.navigator;
-    if (!/Edge/i.test(nav && nav.userAgent)) {
+    if (!isEdge) {
       features['left'] = x;
       features['top'] = y;
     }
@@ -2231,6 +2242,16 @@ class ActivityWindowPort {
       featuresStr += `${f}=${features[f]}`;
     }
     return featuresStr;
+  }
+
+  /**
+   * This method only exists to make iframe/top emulation possible in tests.
+   * Otherwise `window.top` cannot be overridden.
+   * @return {boolean}
+   * @private
+   */
+  isTopWindow_() {
+    return this.win_ == this.win_.top;
   }
 
   /** @private */
@@ -2440,7 +2461,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.10';
+    this.version = '1.11';
 
     /** @private @const {!Window} */
     this.win_ = win;
