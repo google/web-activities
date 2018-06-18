@@ -257,3 +257,24 @@ export function resolveResult(win, result, resolver) {
     resolver(Promise.reject(error));
   }
 }
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+export function isIeBrowser(win) {
+  // MSIE and Trident are typical user agents for IE browsers.
+  const nav = win.navigator;
+  return /Trident|MSIE|IEMobile/i.test(nav && nav.userAgent);
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+export function isEdgeBrowser(win) {
+  const nav = win.navigator;
+  return /Edge/i.test(nav && nav.userAgent);
+}

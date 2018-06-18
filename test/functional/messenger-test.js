@@ -624,7 +624,25 @@ describes.realWin('Messenger', {}, env => {
       expect(target.postMessage).to.not.be.called;
     });
 
-    it('should allow connect without origin', () => {
+    it('should allow connect without origin on non-IE browsers', () => {
+      messenger.sendConnectCommand();
+      expect(target.postMessage).to.be.calledOnce;
+      expect(target.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'connect',
+        payload: {
+          acceptsChannel: false,
+        },
+      });
+      expect(target.postMessage.args[0][1]).to.equal('*');
+    });
+
+    it('should allow connect without origin on IE browsers', () => {
+      // IE user agent.
+      Object.defineProperty(win.navigator, 'userAgent', {
+        value: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 7.0;' +
+            ' InfoPath.3; .NET CLR 3.1.40767; Trident/6.0; en-IN)',
+      });
       messenger.sendConnectCommand();
       expect(target.postMessage).to.be.calledOnce;
       expect(target.postMessage.args[0][0]).to.deep.equal({
