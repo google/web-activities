@@ -96,6 +96,10 @@
             what: 'message',
             payload: payload,
           });
+          if (payload && payload.cmd == 'open_popup') {
+            var w = window.open("https://www.wikipedia.org/", '_blank', 'width=500,height=300');
+            console.log("popup: ", w);
+          }
         });
         port.message({from: 'client'});
         port.messageChannel('a').then(function(channel) {

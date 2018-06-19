@@ -34,6 +34,7 @@
     <button id="result_button">Return result</button>
     <button id="cancel_button">Cancel</button>
     <button id="fail_button">Fail</button>
+    <button id="open_popup">Open popup</button>
 
     <p>
       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et elementum lorem, ut ullamcorper libero. Mauris pretium, dui sit amet elementum sagittis, lorem nisi facilisis massa, in euismod turpis arcu vitae diam. Proin a gravida nibh. Integer sollicitudin erat massa, a cursus enim euismod quis.
@@ -90,6 +91,13 @@
       };
       document.getElementById('fail_button').onclick = function() {
         host.failed(new Error('something failed here'));
+      };
+      if (host.getMode() != 'iframe') {
+        document.getElementById('open_popup').disabled = true;
+        document.getElementById('open_popup').hidden = true;
+      }
+      document.getElementById('open_popup').onclick = function() {
+        host.message({cmd: 'open_popup'});
       };
       host.ready();
     }).catch(function(reason) {
