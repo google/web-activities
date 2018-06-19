@@ -20,6 +20,7 @@ import {
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
+  ActivityRequestDef,
   ActivityResult,
   ActivityResultCode,
 } from './src/activity-types';
@@ -32,6 +33,7 @@ module.exports = {
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
+  ActivityRequestDef,
   ActivityResult,
   ActivityResultCode,
   ActivityWindowPort,

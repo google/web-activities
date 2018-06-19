@@ -79,6 +79,19 @@ class ActivityResult {
 
 
 /**
+ * The activity request that different types of hosts can be started with.
+ * @typedef {{
+ *   requestId: string,
+ *   returnUrl: string,
+ *   args: ?Object,
+ *   origin: (string|undefined),
+ *   originVerified: (boolean|undefined),
+ * }}
+ */
+let ActivityRequest;
+
+
+/**
  * The activity "open" options used for popups and redirects.
  *
  * - returnUrl: override the return URL. By default, the current URL will be
@@ -1593,6 +1606,7 @@ module.exports = {
   ActivityMode,
   ActivityOpenOptions,
   ActivityPort,
+  ActivityRequest,
   ActivityResult,
   ActivityResultCode,
   ActivityWindowPort,
