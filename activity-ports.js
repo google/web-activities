@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.11 */
+ /** Version: 1.12 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -147,6 +147,251 @@ class ActivityPort {
  *
  * @interface
  */
+
+
+
+/** DOMException.ABORT_ERR name */
+const ABORT_ERR_NAME = 'AbortError';
+
+/** DOMException.ABORT_ERR = 20 */
+const ABORT_ERR_CODE = 20;
+
+/** @type {?HTMLAnchorElement} */
+let aResolver;
+
+
+/**
+ * @param {string} urlString
+ * @return {!HTMLAnchorElement}
+ */
+function parseUrl(urlString) {
+  if (!aResolver) {
+    aResolver = /** @type {!HTMLAnchorElement} */ (document.createElement('a'));
+  }
+  aResolver.href = urlString;
+  return /** @type {!HTMLAnchorElement} */ (aResolver);
+}
+
+
+/**
+ * @param {!Location|!URL|!HTMLAnchorElement} loc
+ * @return {string}
+ */
+function getOrigin(loc) {
+  return loc.origin || loc.protocol + '//' + loc.host;
+}
+
+
+/**
+ * @param {string} urlString
+ * @return {string}
+ */
+function getOriginFromUrl(urlString) {
+  return getOrigin(parseUrl(urlString));
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {string}
+ */
+
+
+
+/**
+ * @param {string} urlString
+ * @return {string}
+ */
+function removeFragment(urlString) {
+  const index = urlString.indexOf('#');
+  if (index == -1) {
+    return urlString;
+  }
+  return urlString.substring(0, index);
+}
+
+
+/**
+ * Parses and builds Object of URL query string.
+ * @param {string} query The URL query string.
+ * @return {!Object<string, string>}
+ */
+function parseQueryString(query) {
+  if (!query) {
+    return {};
+  }
+  return (/^[?#]/.test(query) ? query.slice(1) : query)
+      .split('&')
+      .reduce((params, param) => {
+        const item = param.split('=');
+        const key = decodeURIComponent(item[0] || '');
+        const value = decodeURIComponent(item[1] || '');
+        if (key) {
+          params[key] = value;
+        }
+        return params;
+      }, {});
+}
+
+
+/**
+ * @param {string} queryString  A query string in the form of "a=b&c=d". Could
+ *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to get from the query string.
+ * @return {?string}
+ */
+function getQueryParam(queryString, param) {
+  return parseQueryString(queryString)[param];
+}
+
+
+/**
+ * Add a query-like parameter to the fragment string.
+ * @param {string} url
+ * @param {string} param
+ * @param {string} value
+ * @return {string}
+ */
+function addFragmentParam(url, param, value) {
+  return url +
+      (url.indexOf('#') == -1 ? '#' : '&') +
+      encodeURIComponent(param) + '=' + encodeURIComponent(value);
+}
+
+
+/**
+ * @param {string} queryString  A query string in the form of "a=b&c=d". Could
+ *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to remove from the query string.
+ * @return {?string}
+ */
+function removeQueryParam(queryString, param) {
+  if (!queryString) {
+    return queryString;
+  }
+  const search = encodeURIComponent(param) + '=';
+  let index = -1;
+  do {
+    index = queryString.indexOf(search, index);
+    if (index != -1) {
+      const prev = index > 0 ? queryString.substring(index - 1, index) : '';
+      if (prev == '' || prev == '?' || prev == '#' || prev == '&') {
+        let end = queryString.indexOf('&', index + 1);
+        if (end == -1) {
+          end = queryString.length;
+        }
+        queryString =
+            queryString.substring(0, index) +
+            queryString.substring(end + 1);
+      } else {
+        index++;
+      }
+    }
+  } while (index != -1 && index < queryString.length);
+  return queryString;
+}
+
+
+/**
+ * @param {?string} requestString
+ * @param {boolean=} trusted
+ * @return {?ActivityRequest}
+ */
+
+
+
+/**
+ * @param {!ActivityRequest} request
+ * @return {string}
+ */
+function serializeRequest(request) {
+  const map = {
+    'requestId': request.requestId,
+    'returnUrl': request.returnUrl,
+    'args': request.args,
+  };
+  if (request.origin !== undefined) {
+    map['origin'] = request.origin;
+  }
+  if (request.originVerified !== undefined) {
+    map['originVerified'] = request.originVerified;
+  }
+  return JSON.stringify(map);
+}
+
+
+/**
+ * Creates or emulates a DOMException of AbortError type.
+ * See https://heycam.github.io/webidl/#aborterror.
+ * @param {!Window} win
+ * @param {string=} opt_message
+ * @return {!DOMException}
+ */
+function createAbortError(win, opt_message) {
+  const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
+  let error = null;
+  if (typeof win['DOMException'] == 'function') {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string, string)} */ (
+        win['DOMException']);
+    try {
+      error = new constr(message, ABORT_ERR_NAME);
+    } catch (e) {
+      // Ignore. In particular, `new DOMException()` fails in Edge.
+    }
+  }
+  if (!error) {
+    // TODO(dvoytenko): remove typecast once externs are fixed.
+    const constr = /** @type {function(new:DOMException, string)} */ (
+        Error);
+    error = new constr(message);
+    error.name = ABORT_ERR_NAME;
+    error.code = ABORT_ERR_CODE;
+  }
+  return error;
+}
+
+
+/**
+ * Resolves the activity result as a promise:
+ *  - `OK` result is yielded as the promise's payload;
+ *  - `CANCEL` result is rejected with the `AbortError`;
+ *  - `FAILED` result is rejected with the embedded error.
+ *
+ * @param {!Window} win
+ * @param {!ActivityResult} result
+ * @param {function((!ActivityResult|!Promise))} resolver
+ */
+function resolveResult(win, result, resolver) {
+  if (result.ok) {
+    resolver(result);
+  } else {
+    const error = result.error || createAbortError(win);
+    error.activityResult = result;
+    resolver(Promise.reject(error));
+  }
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+function isIeBrowser(win) {
+  // MSIE and Trident are typical user agents for IE browsers.
+  const nav = win.navigator;
+  return /Trident|MSIE|IEMobile/i.test(nav && nav.userAgent);
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+function isEdgeBrowser(win) {
+  const nav = win.navigator;
+  return /Edge/i.test(nav && nav.userAgent);
+}
 
 
 
@@ -290,7 +535,18 @@ class Messenger {
    * "start" command. See `sendStartCommand` method.
    */
   sendConnectCommand() {
-    this.sendCommand('connect', {'acceptsChannel': true});
+    // TODO(dvoytenko): MessageChannel is critically necessary for IE/Edge,
+    // since window messaging doesn't always work. It's also preferred as an API
+    // for other browsers: it's newer, cleaner and arguably more secure.
+    // Unfortunately, browsers currently do not propagate user gestures via
+    // MessageChannel, only via window messaging. This should be re-enabled
+    // once browsers fix user gesture propagation.
+    // See:
+    // Safari: https://bugs.webkit.org/show_bug.cgi?id=186593
+    // Chrome: https://bugs.chromium.org/p/chromium/issues/detail?id=851493
+    // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1469422
+    const acceptsChannel = isIeBrowser(this.win_) || isEdgeBrowser(this.win_);
+    this.sendCommand('connect', {'acceptsChannel': acceptsChannel});
   }
 
   /**
@@ -529,230 +785,6 @@ function closePort(port) {
     port.close();
   } catch (e) {
     // Ignore.
-  }
-}
-
-
-
-/** DOMException.ABORT_ERR name */
-const ABORT_ERR_NAME = 'AbortError';
-
-/** DOMException.ABORT_ERR = 20 */
-const ABORT_ERR_CODE = 20;
-
-/** @type {?HTMLAnchorElement} */
-let aResolver;
-
-
-/**
- * @param {string} urlString
- * @return {!HTMLAnchorElement}
- */
-function parseUrl(urlString) {
-  if (!aResolver) {
-    aResolver = /** @type {!HTMLAnchorElement} */ (document.createElement('a'));
-  }
-  aResolver.href = urlString;
-  return /** @type {!HTMLAnchorElement} */ (aResolver);
-}
-
-
-/**
- * @param {!Location|!URL|!HTMLAnchorElement} loc
- * @return {string}
- */
-function getOrigin(loc) {
-  return loc.origin || loc.protocol + '//' + loc.host;
-}
-
-
-/**
- * @param {string} urlString
- * @return {string}
- */
-function getOriginFromUrl(urlString) {
-  return getOrigin(parseUrl(urlString));
-}
-
-
-/**
- * @param {!Window} win
- * @return {string}
- */
-
-
-
-/**
- * @param {string} urlString
- * @return {string}
- */
-function removeFragment(urlString) {
-  const index = urlString.indexOf('#');
-  if (index == -1) {
-    return urlString;
-  }
-  return urlString.substring(0, index);
-}
-
-
-/**
- * Parses and builds Object of URL query string.
- * @param {string} query The URL query string.
- * @return {!Object<string, string>}
- */
-function parseQueryString(query) {
-  if (!query) {
-    return {};
-  }
-  return (/^[?#]/.test(query) ? query.slice(1) : query)
-      .split('&')
-      .reduce((params, param) => {
-        const item = param.split('=');
-        const key = decodeURIComponent(item[0] || '');
-        const value = decodeURIComponent(item[1] || '');
-        if (key) {
-          params[key] = value;
-        }
-        return params;
-      }, {});
-}
-
-
-/**
- * @param {string} queryString  A query string in the form of "a=b&c=d". Could
- *   be optionally prefixed with "?" or "#".
- * @param {string} param The param to get from the query string.
- * @return {?string}
- */
-function getQueryParam(queryString, param) {
-  return parseQueryString(queryString)[param];
-}
-
-
-/**
- * Add a query-like parameter to the fragment string.
- * @param {string} url
- * @param {string} param
- * @param {string} value
- * @return {string}
- */
-function addFragmentParam(url, param, value) {
-  return url +
-      (url.indexOf('#') == -1 ? '#' : '&') +
-      encodeURIComponent(param) + '=' + encodeURIComponent(value);
-}
-
-
-/**
- * @param {string} queryString  A query string in the form of "a=b&c=d". Could
- *   be optionally prefixed with "?" or "#".
- * @param {string} param The param to remove from the query string.
- * @return {?string}
- */
-function removeQueryParam(queryString, param) {
-  if (!queryString) {
-    return queryString;
-  }
-  const search = encodeURIComponent(param) + '=';
-  let index = -1;
-  do {
-    index = queryString.indexOf(search, index);
-    if (index != -1) {
-      const prev = index > 0 ? queryString.substring(index - 1, index) : '';
-      if (prev == '' || prev == '?' || prev == '#' || prev == '&') {
-        let end = queryString.indexOf('&', index + 1);
-        if (end == -1) {
-          end = queryString.length;
-        }
-        queryString =
-            queryString.substring(0, index) +
-            queryString.substring(end + 1);
-      } else {
-        index++;
-      }
-    }
-  } while (index != -1 && index < queryString.length);
-  return queryString;
-}
-
-
-/**
- * @param {?string} requestString
- * @param {boolean=} trusted
- * @return {?ActivityRequest}
- */
-
-
-
-/**
- * @param {!ActivityRequest} request
- * @return {string}
- */
-function serializeRequest(request) {
-  const map = {
-    'requestId': request.requestId,
-    'returnUrl': request.returnUrl,
-    'args': request.args,
-  };
-  if (request.origin !== undefined) {
-    map['origin'] = request.origin;
-  }
-  if (request.originVerified !== undefined) {
-    map['originVerified'] = request.originVerified;
-  }
-  return JSON.stringify(map);
-}
-
-
-/**
- * Creates or emulates a DOMException of AbortError type.
- * See https://heycam.github.io/webidl/#aborterror.
- * @param {!Window} win
- * @param {string=} opt_message
- * @return {!DOMException}
- */
-function createAbortError(win, opt_message) {
-  const message = 'AbortError' + (opt_message ? ': ' + opt_message : '');
-  let error = null;
-  if (typeof win['DOMException'] == 'function') {
-    // TODO(dvoytenko): remove typecast once externs are fixed.
-    const constr = /** @type {function(new:DOMException, string, string)} */ (
-        win['DOMException']);
-    try {
-      error = new constr(message, ABORT_ERR_NAME);
-    } catch (e) {
-      // Ignore. In particular, `new DOMException()` fails in Edge.
-    }
-  }
-  if (!error) {
-    // TODO(dvoytenko): remove typecast once externs are fixed.
-    const constr = /** @type {function(new:DOMException, string)} */ (
-        Error);
-    error = new constr(message);
-    error.name = ABORT_ERR_NAME;
-    error.code = ABORT_ERR_CODE;
-  }
-  return error;
-}
-
-
-/**
- * Resolves the activity result as a promise:
- *  - `OK` result is yielded as the promise's payload;
- *  - `CANCEL` result is rejected with the `AbortError`;
- *  - `FAILED` result is rejected with the embedded error.
- *
- * @param {!Window} win
- * @param {!ActivityResult} result
- * @param {function((!ActivityResult|!Promise))} resolver
- */
-function resolveResult(win, result, resolver) {
-  if (result.ok) {
-    resolver(result);
-  } else {
-    const error = result.error || createAbortError(win);
-    error.activityResult = result;
-    resolver(Promise.reject(error));
   }
 }
 
@@ -1108,9 +1140,7 @@ class ActivityWindowPort {
     // IE does not support CORS popups - the popup has to fallback to redirect
     // mode.
     if (openTarget != '_top') {
-      // MSIE and Trident are typical user agents for IE browsers.
-      const nav = this.win_.navigator;
-      if (/Trident|MSIE|IEMobile/i.test(nav && nav.userAgent)) {
+      if (isIeBrowser(this.win_)) {
         openTarget = '_top';
       }
     }
@@ -1160,8 +1190,7 @@ class ActivityWindowPort {
     const availWidth = screen.availWidth || screen.width;
     const availHeight = screen.availHeight || screen.height;
     const isTop = this.isTopWindow_();
-    const nav = this.win_.navigator;
-    const isEdge = /Edge/i.test(nav && nav.userAgent);
+    const isEdge = isEdgeBrowser(this.win_);
     // Limit controls to 100px width and height. Notice that it's only
     // possible to calculate controls size in the top window, not in iframes.
     // Notice that the Edge behavior is somewhat unique. If we can't find the
@@ -1429,7 +1458,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.11';
+    this.version = '1.12';
 
     /** @private @const {!Window} */
     this.win_ = win;
