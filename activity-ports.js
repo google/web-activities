@@ -79,19 +79,6 @@ class ActivityResult {
 
 
 /**
- * The activity request that different types of hosts can be started with.
- * @typedef {{
- *   requestId: string,
- *   returnUrl: string,
- *   args: ?Object,
- *   origin: (string|undefined),
- *   originVerified: (boolean|undefined),
- * }}
- */
-
-
-
-/**
  * The activity "open" options used for popups and redirects.
  *
  * - returnUrl: override the return URL. By default, the current URL will be
@@ -140,15 +127,6 @@ class ActivityPort {
 }
 
 
-/**
- * Activity implementation. The host provides interfaces, callbacks and
- * signals for the activity's implementation to communicate with the client
- * and return the results.
- *
- * @interface
- */
-
-
 
 /** DOMException.ABORT_ERR name */
 const ABORT_ERR_NAME = 'AbortError';
@@ -189,13 +167,6 @@ function getOrigin(loc) {
 function getOriginFromUrl(urlString) {
   return getOrigin(parseUrl(urlString));
 }
-
-
-/**
- * @param {!Window} win
- * @return {string}
- */
-
 
 
 /**
@@ -290,14 +261,6 @@ function removeQueryParam(queryString, param) {
   } while (index != -1 && index < queryString.length);
   return queryString;
 }
-
-
-/**
- * @param {?string} requestString
- * @param {boolean=} trusted
- * @return {?ActivityRequest}
- */
-
 
 
 /**
@@ -396,6 +359,7 @@ function isEdgeBrowser(win) {
 
 
 const SENTINEL = '__ACTIVITIES__';
+
 
 /**
  * The messenger helper for activity's port and host.
@@ -790,6 +754,7 @@ function closePort(port) {
 
 
 
+
 /**
  * The `ActivityPort` implementation for the iframe case. Unlike other types
  * of activities, iframe-based activities are always connected and can react
@@ -993,6 +958,7 @@ class ActivityIframePort {
     }
   }
 }
+
 
 
 
@@ -1443,6 +1409,7 @@ class ActivityWindowRedirectPort {
     });
   }
 }
+
 
 
 

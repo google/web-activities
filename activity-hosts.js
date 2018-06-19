@@ -92,36 +92,6 @@ let ActivityRequest;
 
 
 /**
- * The activity "open" options used for popups and redirects.
- *
- * - returnUrl: override the return URL. By default, the current URL will be
- *   used.
- * - skipRequestInUrl: removes the activity request from the URL, in case
- *   redirect is used. By default, the activity request is appended to the
- *   activity URL. This option can be used if the activity request is passed
- *   to the activity by some alternative means.
- *
- * @typedef {{
- *   returnUrl: (string|undefined),
- *   skipRequestInUrl: (boolean|undefined),
- *   width: (number|undefined),
- *   height: (number|undefined),
- * }}
- */
-
-
-
-/**
- * Activity client-side binding. The port provides limited ways to communicate
- * with the activity and receive signals and results from it. Not every type
- * of activity exposes a port.
- *
- * @interface
- */
-
-
-
-/**
  * Activity implementation. The host provides interfaces, callbacks and
  * signals for the activity's implementation to communicate with the client
  * and return the results.
@@ -322,13 +292,6 @@ function getWindowOrigin(win) {
 
 
 /**
- * @param {string} urlString
- * @return {string}
- */
-
-
-
-/**
  * Parses and builds Object of URL query string.
  * @param {string} query The URL query string.
  * @return {!Object<string, string>}
@@ -360,25 +323,6 @@ function parseQueryString(query) {
 function getQueryParam(queryString, param) {
   return parseQueryString(queryString)[param];
 }
-
-
-/**
- * Add a query-like parameter to the fragment string.
- * @param {string} url
- * @param {string} param
- * @param {string} value
- * @return {string}
- */
-
-
-
-/**
- * @param {string} queryString  A query string in the form of "a=b&c=d". Could
- *   be optionally prefixed with "?" or "#".
- * @param {string} param The param to remove from the query string.
- * @return {?string}
- */
-
 
 
 /**
@@ -427,29 +371,6 @@ function serializeRequest(request) {
 
 
 /**
- * Creates or emulates a DOMException of AbortError type.
- * See https://heycam.github.io/webidl/#aborterror.
- * @param {!Window} win
- * @param {string=} opt_message
- * @return {!DOMException}
- */
-
-
-
-/**
- * Resolves the activity result as a promise:
- *  - `OK` result is yielded as the promise's payload;
- *  - `CANCEL` result is rejected with the `AbortError`;
- *  - `FAILED` result is rejected with the embedded error.
- *
- * @param {!Window} win
- * @param {!ActivityResult} result
- * @param {function((!ActivityResult|!Promise))} resolver
- */
-
-
-
-/**
  * @param {!Window} win
  * @return {boolean}
  */
@@ -472,6 +393,7 @@ function isEdgeBrowser(win) {
 
 
 const SENTINEL = '__ACTIVITIES__';
+
 
 /**
  * The messenger helper for activity's port and host.
@@ -866,6 +788,7 @@ function closePort(port) {
 
 
 
+
 /**
  * The `ActivityHost` implementation for the iframe activity. Unlike other
  * types of activities, this implementation can realistically request and
@@ -1131,6 +1054,7 @@ class ActivityIframeHost {
     }
   }
 }
+
 
 
 
@@ -1688,6 +1612,7 @@ class ActivityWindowRedirectHost {
     }
   }
 }
+
 
 
 

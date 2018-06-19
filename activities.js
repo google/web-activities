@@ -562,6 +562,7 @@ function isEdgeBrowser(win) {
 
 const SENTINEL = '__ACTIVITIES__';
 
+
 /**
  * The messenger helper for activity's port and host.
  */
@@ -955,6 +956,7 @@ function closePort(port) {
 
 
 
+
 /**
  * The `ActivityHost` implementation for the iframe activity. Unlike other
  * types of activities, this implementation can realistically request and
@@ -1220,6 +1222,7 @@ class ActivityIframeHost {
     }
   }
 }
+
 
 
 
@@ -1780,6 +1783,7 @@ class ActivityWindowRedirectHost {
 
 
 
+
 /**
  * The page-level activities manager for hosts. This class is intended to be
  * used as a singleton. It can be used to connect an activity host of any type:
@@ -1819,6 +1823,7 @@ class ActivityHosts {
     return host.connect(opt_request);
   }
 }
+
 
 
 
@@ -2025,6 +2030,7 @@ class ActivityIframePort {
     }
   }
 }
+
 
 
 
@@ -2475,6 +2481,7 @@ class ActivityWindowRedirectPort {
     });
   }
 }
+
 
 
 
