@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import {isIeBrowser} from './utils';
+import {isEdgeBrowser, isIeBrowser} from './utils';
 
 const SENTINEL = '__ACTIVITIES__';
 
@@ -168,8 +168,8 @@ export class Messenger {
    * "start" command. See `sendStartCommand` method.
    */
   sendConnectCommand() {
-    // TODO(dvoytenko): MessageChannel is critically necessary for IE, since
-    // window messaging doesn't always work. It's also preferred as an API
+    // TODO(dvoytenko): MessageChannel is critically necessary for IE/Edge,
+    // since window messaging doesn't always work. It's also preferred as an API
     // for other browsers: it's newer, cleaner and arguably more secure.
     // Unfortunately, browsers currently do not propagate user gestures via
     // MessageChannel, only via window messaging. This should be re-enabled
@@ -178,7 +178,7 @@ export class Messenger {
     // Safari: https://bugs.webkit.org/show_bug.cgi?id=186593
     // Chrome: https://bugs.chromium.org/p/chromium/issues/detail?id=851493
     // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1469422
-    const acceptsChannel = isIeBrowser(this.win_);
+    const acceptsChannel = isIeBrowser(this.win_) || isEdgeBrowser(this.win_);
     this.sendCommand('connect', {'acceptsChannel': acceptsChannel});
   }
 
