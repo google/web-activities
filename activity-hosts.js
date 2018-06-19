@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.11 */
+ /** Version: 1.12 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -89,36 +89,6 @@ class ActivityResult {
  * }}
  */
 let ActivityRequest;
-
-
-/**
- * The activity "open" options used for popups and redirects.
- *
- * - returnUrl: override the return URL. By default, the current URL will be
- *   used.
- * - skipRequestInUrl: removes the activity request from the URL, in case
- *   redirect is used. By default, the activity request is appended to the
- *   activity URL. This option can be used if the activity request is passed
- *   to the activity by some alternative means.
- *
- * @typedef {{
- *   returnUrl: (string|undefined),
- *   skipRequestInUrl: (boolean|undefined),
- *   width: (number|undefined),
- *   height: (number|undefined),
- * }}
- */
-
-
-
-/**
- * Activity client-side binding. The port provides limited ways to communicate
- * with the activity and receive signals and results from it. Not every type
- * of activity exposes a port.
- *
- * @interface
- */
-
 
 
 /**
@@ -277,7 +247,153 @@ class ActivityHost {
 
 
 
+/** @type {?HTMLAnchorElement} */
+let aResolver;
+
+
+/**
+ * @param {string} urlString
+ * @return {!HTMLAnchorElement}
+ */
+function parseUrl(urlString) {
+  if (!aResolver) {
+    aResolver = /** @type {!HTMLAnchorElement} */ (document.createElement('a'));
+  }
+  aResolver.href = urlString;
+  return /** @type {!HTMLAnchorElement} */ (aResolver);
+}
+
+
+/**
+ * @param {!Location|!URL|!HTMLAnchorElement} loc
+ * @return {string}
+ */
+function getOrigin(loc) {
+  return loc.origin || loc.protocol + '//' + loc.host;
+}
+
+
+/**
+ * @param {string} urlString
+ * @return {string}
+ */
+function getOriginFromUrl(urlString) {
+  return getOrigin(parseUrl(urlString));
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {string}
+ */
+function getWindowOrigin(win) {
+  return (win.origin || getOrigin(win.location));
+}
+
+
+/**
+ * Parses and builds Object of URL query string.
+ * @param {string} query The URL query string.
+ * @return {!Object<string, string>}
+ */
+function parseQueryString(query) {
+  if (!query) {
+    return {};
+  }
+  return (/^[?#]/.test(query) ? query.slice(1) : query)
+      .split('&')
+      .reduce((params, param) => {
+        const item = param.split('=');
+        const key = decodeURIComponent(item[0] || '');
+        const value = decodeURIComponent(item[1] || '');
+        if (key) {
+          params[key] = value;
+        }
+        return params;
+      }, {});
+}
+
+
+/**
+ * @param {string} queryString  A query string in the form of "a=b&c=d". Could
+ *   be optionally prefixed with "?" or "#".
+ * @param {string} param The param to get from the query string.
+ * @return {?string}
+ */
+function getQueryParam(queryString, param) {
+  return parseQueryString(queryString)[param];
+}
+
+
+/**
+ * @param {?string} requestString
+ * @param {boolean=} trusted
+ * @return {?ActivityRequest}
+ */
+function parseRequest(requestString, trusted = false) {
+  if (!requestString) {
+    return null;
+  }
+  const parsed = /** @type {!Object} */ (JSON.parse(requestString));
+  const request = {
+    requestId: /** @type {string} */ (parsed['requestId']),
+    returnUrl: /** @type {string} */ (parsed['returnUrl']),
+    args: /** @type {?Object} */ (parsed['args'] || null),
+  };
+  if (trusted) {
+    request.origin = /** @type {string|undefined} */ (
+        parsed['origin'] || undefined);
+    request.originVerified = /** @type {boolean|undefined} */ (
+        parsed['originVerified'] || undefined);
+  }
+  return request;
+}
+
+
+/**
+ * @param {!ActivityRequest} request
+ * @return {string}
+ */
+function serializeRequest(request) {
+  const map = {
+    'requestId': request.requestId,
+    'returnUrl': request.returnUrl,
+    'args': request.args,
+  };
+  if (request.origin !== undefined) {
+    map['origin'] = request.origin;
+  }
+  if (request.originVerified !== undefined) {
+    map['originVerified'] = request.originVerified;
+  }
+  return JSON.stringify(map);
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+function isIeBrowser(win) {
+  // MSIE and Trident are typical user agents for IE browsers.
+  const nav = win.navigator;
+  return /Trident|MSIE|IEMobile/i.test(nav && nav.userAgent);
+}
+
+
+/**
+ * @param {!Window} win
+ * @return {boolean}
+ */
+function isEdgeBrowser(win) {
+  const nav = win.navigator;
+  return /Edge/i.test(nav && nav.userAgent);
+}
+
+
+
 const SENTINEL = '__ACTIVITIES__';
+
 
 /**
  * The messenger helper for activity's port and host.
@@ -417,7 +533,18 @@ class Messenger {
    * "start" command. See `sendStartCommand` method.
    */
   sendConnectCommand() {
-    this.sendCommand('connect', {'acceptsChannel': true});
+    // TODO(dvoytenko): MessageChannel is critically necessary for IE/Edge,
+    // since window messaging doesn't always work. It's also preferred as an API
+    // for other browsers: it's newer, cleaner and arguably more secure.
+    // Unfortunately, browsers currently do not propagate user gestures via
+    // MessageChannel, only via window messaging. This should be re-enabled
+    // once browsers fix user gesture propagation.
+    // See:
+    // Safari: https://bugs.webkit.org/show_bug.cgi?id=186593
+    // Chrome: https://bugs.chromium.org/p/chromium/issues/detail?id=851493
+    // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1469422
+    const acceptsChannel = isIeBrowser(this.win_) || isEdgeBrowser(this.win_);
+    this.sendCommand('connect', {'acceptsChannel': acceptsChannel});
   }
 
   /**
@@ -658,6 +785,7 @@ function closePort(port) {
     // Ignore.
   }
 }
+
 
 
 
@@ -927,177 +1055,6 @@ class ActivityIframeHost {
   }
 }
 
-
-
-/** @type {?HTMLAnchorElement} */
-let aResolver;
-
-
-/**
- * @param {string} urlString
- * @return {!HTMLAnchorElement}
- */
-function parseUrl(urlString) {
-  if (!aResolver) {
-    aResolver = /** @type {!HTMLAnchorElement} */ (document.createElement('a'));
-  }
-  aResolver.href = urlString;
-  return /** @type {!HTMLAnchorElement} */ (aResolver);
-}
-
-
-/**
- * @param {!Location|!URL|!HTMLAnchorElement} loc
- * @return {string}
- */
-function getOrigin(loc) {
-  return loc.origin || loc.protocol + '//' + loc.host;
-}
-
-
-/**
- * @param {string} urlString
- * @return {string}
- */
-function getOriginFromUrl(urlString) {
-  return getOrigin(parseUrl(urlString));
-}
-
-
-/**
- * @param {!Window} win
- * @return {string}
- */
-function getWindowOrigin(win) {
-  return (win.origin || getOrigin(win.location));
-}
-
-
-/**
- * @param {string} urlString
- * @return {string}
- */
-
-
-
-/**
- * Parses and builds Object of URL query string.
- * @param {string} query The URL query string.
- * @return {!Object<string, string>}
- */
-function parseQueryString(query) {
-  if (!query) {
-    return {};
-  }
-  return (/^[?#]/.test(query) ? query.slice(1) : query)
-      .split('&')
-      .reduce((params, param) => {
-        const item = param.split('=');
-        const key = decodeURIComponent(item[0] || '');
-        const value = decodeURIComponent(item[1] || '');
-        if (key) {
-          params[key] = value;
-        }
-        return params;
-      }, {});
-}
-
-
-/**
- * @param {string} queryString  A query string in the form of "a=b&c=d". Could
- *   be optionally prefixed with "?" or "#".
- * @param {string} param The param to get from the query string.
- * @return {?string}
- */
-function getQueryParam(queryString, param) {
-  return parseQueryString(queryString)[param];
-}
-
-
-/**
- * Add a query-like parameter to the fragment string.
- * @param {string} url
- * @param {string} param
- * @param {string} value
- * @return {string}
- */
-
-
-
-/**
- * @param {string} queryString  A query string in the form of "a=b&c=d". Could
- *   be optionally prefixed with "?" or "#".
- * @param {string} param The param to remove from the query string.
- * @return {?string}
- */
-
-
-
-/**
- * @param {?string} requestString
- * @param {boolean=} trusted
- * @return {?ActivityRequest}
- */
-function parseRequest(requestString, trusted = false) {
-  if (!requestString) {
-    return null;
-  }
-  const parsed = /** @type {!Object} */ (JSON.parse(requestString));
-  const request = {
-    requestId: /** @type {string} */ (parsed['requestId']),
-    returnUrl: /** @type {string} */ (parsed['returnUrl']),
-    args: /** @type {?Object} */ (parsed['args'] || null),
-  };
-  if (trusted) {
-    request.origin = /** @type {string|undefined} */ (
-        parsed['origin'] || undefined);
-    request.originVerified = /** @type {boolean|undefined} */ (
-        parsed['originVerified'] || undefined);
-  }
-  return request;
-}
-
-
-/**
- * @param {!ActivityRequest} request
- * @return {string}
- */
-function serializeRequest(request) {
-  const map = {
-    'requestId': request.requestId,
-    'returnUrl': request.returnUrl,
-    'args': request.args,
-  };
-  if (request.origin !== undefined) {
-    map['origin'] = request.origin;
-  }
-  if (request.originVerified !== undefined) {
-    map['originVerified'] = request.originVerified;
-  }
-  return JSON.stringify(map);
-}
-
-
-/**
- * Creates or emulates a DOMException of AbortError type.
- * See https://heycam.github.io/webidl/#aborterror.
- * @param {!Window} win
- * @param {string=} opt_message
- * @return {!DOMException}
- */
-
-
-
-/**
- * Resolves the activity result as a promise:
- *  - `OK` result is yielded as the promise's payload;
- *  - `CANCEL` result is rejected with the `AbortError`;
- *  - `FAILED` result is rejected with the embedded error.
- *
- * @param {!Window} win
- * @param {!ActivityResult} result
- * @param {function((!ActivityResult|!Promise))} resolver
- */
 
 
 
@@ -1658,6 +1615,7 @@ class ActivityWindowRedirectHost {
 
 
 
+
 /**
  * The page-level activities manager for hosts. This class is intended to be
  * used as a singleton. It can be used to connect an activity host of any type:
@@ -1670,7 +1628,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.11';
+    this.version = '1.12';
 
     /** @private @const {!Window} */
     this.win_ = win;

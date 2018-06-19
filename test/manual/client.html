@@ -43,8 +43,17 @@
   };
   var MAX_IFRAME_HEIGHT = Math.min(280, window.innerHeight - 10);
 
+  var readyActivities = null;
+
   function whenReady(callback) {
+    // Employing here async-vs-sync pattern (grudingly) b/c of the Firefox
+    // microtask popup blocker (see https://bugzilla.mozilla.org/show_bug.cgi?id=1469730).
+    if (readyActivities) {
+      callback(readyActivities);
+      return;
+    }
     (window.ACTIVITIES = window.ACTIVITIES || []).push(function(activities) {
+      readyActivities = activities;
       callback(activities);
     });
   }
@@ -96,6 +105,10 @@
             what: 'message',
             payload: payload,
           });
+          if (payload && payload.cmd == 'open_popup') {
+            var w = window.open("https://www.wikipedia.org/", '_blank', 'width=500,height=300');
+            console.log("popup: ", w);
+          }
         });
         port.message({from: 'client'});
         port.messageChannel('a').then(function(channel) {

@@ -27,6 +27,8 @@ import {
   addFragmentParam,
   getOriginFromUrl,
   getQueryParam,
+  isIeBrowser,
+  isEdgeBrowser,
   removeFragment,
   removeQueryParam,
   resolveResult,
@@ -178,9 +180,7 @@ export class ActivityWindowPort {
     // IE does not support CORS popups - the popup has to fallback to redirect
     // mode.
     if (openTarget != '_top') {
-      // MSIE and Trident are typical user agents for IE browsers.
-      const nav = this.win_.navigator;
-      if (/Trident|MSIE|IEMobile/i.test(nav && nav.userAgent)) {
+      if (isIeBrowser(this.win_)) {
         openTarget = '_top';
       }
     }
@@ -230,8 +230,7 @@ export class ActivityWindowPort {
     const availWidth = screen.availWidth || screen.width;
     const availHeight = screen.availHeight || screen.height;
     const isTop = this.isTopWindow_();
-    const nav = this.win_.navigator;
-    const isEdge = /Edge/i.test(nav && nav.userAgent);
+    const isEdge = isEdgeBrowser(this.win_);
     // Limit controls to 100px width and height. Notice that it's only
     // possible to calculate controls size in the top window, not in iframes.
     // Notice that the Edge behavior is somewhat unique. If we can't find the

@@ -17,6 +17,14 @@
 
 import {Messenger} from '../../src/messenger';
 
+const IE_USER_AGENT =
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 7.0;' +
+    ' InfoPath.3; .NET CLR 3.1.40767; Trident/6.0; en-IN)';
+const EDGE_USER_AGENT =
+    'Mozilla/5.0 (Windows NT 10.0)' +
+    ' AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135' +
+    ' Safari/537.36 Edge/12.10136';
+
 
 describes.realWin('Messenger', {}, env => {
   let win;
@@ -624,7 +632,39 @@ describes.realWin('Messenger', {}, env => {
       expect(target.postMessage).to.not.be.called;
     });
 
-    it('should allow connect without origin', () => {
+    it('should allow connect without origin on non-IE browsers', () => {
+      messenger.sendConnectCommand();
+      expect(target.postMessage).to.be.calledOnce;
+      expect(target.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'connect',
+        payload: {
+          acceptsChannel: false,
+        },
+      });
+      expect(target.postMessage.args[0][1]).to.equal('*');
+    });
+
+    it('should allow connect without origin on IE browsers', () => {
+      Object.defineProperty(win.navigator, 'userAgent', {
+        value: IE_USER_AGENT,
+      });
+      messenger.sendConnectCommand();
+      expect(target.postMessage).to.be.calledOnce;
+      expect(target.postMessage.args[0][0]).to.deep.equal({
+        sentinel: '__ACTIVITIES__',
+        cmd: 'connect',
+        payload: {
+          acceptsChannel: true,
+        },
+      });
+      expect(target.postMessage.args[0][1]).to.equal('*');
+    });
+
+    it('should allow connect without origin on Edge browsers', () => {
+      Object.defineProperty(win.navigator, 'userAgent', {
+        value: EDGE_USER_AGENT,
+      });
       messenger.sendConnectCommand();
       expect(target.postMessage).to.be.calledOnce;
       expect(target.postMessage.args[0][0]).to.deep.equal({
