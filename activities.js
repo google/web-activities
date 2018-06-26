@@ -2325,8 +2325,10 @@ class ActivityWindowPort {
    */
   check_(opt_delayCancel) {
     if (!this.targetWin_ || this.targetWin_.closed) {
-      this.win_.clearInterval(this.heartbeatInterval_);
-      this.heartbeatInterval_ = null;
+      if (this.heartbeatInterval_) {
+        this.win_.clearInterval(this.heartbeatInterval_);
+        this.heartbeatInterval_ = null;
+      }
       // Give a chance for the result to arrive, but otherwise consider the
       // responce to be empty.
       this.win_.setTimeout(() => {
