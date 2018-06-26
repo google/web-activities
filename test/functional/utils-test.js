@@ -19,7 +19,7 @@ import {ActivityResult, ActivityResultCode} from '../../src/activity-types';
 import * as utils from '../../src/utils';
 
 
-describe('utils', () => {
+describes.sandboxed('utils', {}, () => {
 
   describe('getOriginFromUrl', () => {
     it('should return origin for absolute URL', () => {
@@ -45,6 +45,21 @@ describe('utils', () => {
           .to.equal('http://example.com');
       expect(utils.getOriginFromUrl('https://eXaMplE.COM/'))
           .to.equal('https://example.com');
+    });
+
+    it('should return canonical origin on IE', () => {
+      const a = {};
+      utils.setParserForTesting(a);
+
+      a.protocol = 'https:';
+      a.host = 'example.com:443';
+      expect(utils.getOriginFromUrl('no-matter'))
+          .to.equal('https://example.com');
+
+      a.protocol = 'http:';
+      a.host = 'example.com:80';
+      expect(utils.getOriginFromUrl('no-matter'))
+          .to.equal('http://example.com');
     });
   });
 
