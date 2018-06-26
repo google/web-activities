@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.12 */
+ /** Version: 1.13 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -169,7 +169,19 @@ function parseUrl(urlString) {
  * @return {string}
  */
 function getOrigin(loc) {
-  return loc.origin || loc.protocol + '//' + loc.host;
+  if (loc.origin) {
+    return loc.origin;
+  }
+  // Make sure that the origin is normalized. Specifically on IE, host sometimes
+  // includes the default port, which is not per standard.
+  const protocol = loc.protocol;
+  let host = loc.host;
+  if (protocol == 'https:' && host.indexOf(':443') == host.length - 4) {
+    host = host.replace(':443', '');
+  } else if (protocol == 'http:' && host.indexOf(':80') == host.length - 3) {
+    host = host.replace(':80', '');
+  }
+  return protocol + '//' + host;
 }
 
 
@@ -1440,7 +1452,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.12';
+    this.version = '1.13';
 
     /** @private @const {!Window} */
     this.win_ = win;
