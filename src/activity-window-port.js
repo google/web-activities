@@ -305,7 +305,8 @@ export class ActivityWindowPort {
     this.messenger_ = new Messenger(
         this.win_,
         /** @type {!Window} */ (this.targetWin_),
-        /* targetOrigin */ null);
+        /* targetOrigin */ null,
+        /* requireTarget */ true);
     this.messenger_.connect(this.handleCommand_.bind(this));
   }
 

@@ -46,7 +46,8 @@ export class ActivityIframeHost {
     this.messenger_ = new Messenger(
         this.win_,
         this.target_,
-        /* targetOrigin */ null);
+        /* targetOrigin */ null,
+        /* requireTarget */ false);
 
     /** @private {?Object} */
     this.args_ = null;

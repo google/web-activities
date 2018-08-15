@@ -92,6 +92,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
   });
 
   it('should initialize messenger on connect', () => {
+    expect(messenger.requireTarget_).to.be.false;
     const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
     const redirectConnectPromise = Promise.resolve();
     const redirectConnectStub =
@@ -100,6 +101,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     host.connect('{}');
     expect(redirectConnectStub).to.be.calledWith('{}');
     return redirectConnectPromise.then(() => {
+      expect(messenger.requireTarget_).to.be.false;
       expect(messenger.getTarget()).to.equal(opener);
       expect(() => {
         messenger.getTargetOrigin();
