@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.13 */
+ /** Version: 1.14 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -395,10 +395,12 @@ class Messenger {
    * @param {!Window} win
    * @param {!Window|function():?Window} targetOrCallback
    * @param {?string} targetOrigin
+   * @param {boolean} requireTarget
    */
-  constructor(win, targetOrCallback, targetOrigin) {
+  constructor(win, targetOrCallback, targetOrigin, requireTarget) {
     /** @private @const {!Window} */
     this.win_ = win;
+
     /** @private @const {!Window|function():?Window} */
     this.targetOrCallback_ = targetOrCallback;
 
@@ -407,6 +409,9 @@ class Messenger {
      * @private {?string}
      */
     this.targetOrigin_ = targetOrigin;
+
+    /** @private @const {boolean} */
+    this.requireTarget_ = requireTarget;
 
     /** @private {?Window} */
     this.target_ = null;
@@ -697,6 +702,13 @@ class Messenger {
    * @private
    */
   handleEvent_(event) {
+    if (this.requireTarget_ && this.getOptionalTarget_() != event.source) {
+      // When target is required, confirm it against the event.source. This
+      // is normally only needed for ports where a single window can include
+      // multiple iframes to match the event to a specific iframe. Otherwise,
+      // the origin checks below are sufficient.
+      return;
+    }
     const data = event.data;
     if (!data || data['sentinel'] != SENTINEL) {
       return;
@@ -845,7 +857,8 @@ class ActivityIframePort {
     this.messenger_ = new Messenger(
         this.win_,
         () => this.iframe_.contentWindow,
-        this.targetOrigin_);
+        this.targetOrigin_,
+        /* requireTarget */ true);
   }
 
   /** @override */
@@ -1256,7 +1269,8 @@ class ActivityWindowPort {
     this.messenger_ = new Messenger(
         this.win_,
         /** @type {!Window} */ (this.targetWin_),
-        /* targetOrigin */ null);
+        /* targetOrigin */ null,
+        /* requireTarget */ true);
     this.messenger_.connect(this.handleCommand_.bind(this));
   }
 
@@ -1452,7 +1466,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.13';
+    this.version = '1.14';
 
     /** @private @const {!Window} */
     this.win_ = win;
