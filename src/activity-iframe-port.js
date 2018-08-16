@@ -90,7 +90,8 @@ export class ActivityIframePort {
     this.messenger_ = new Messenger(
         this.win_,
         () => this.iframe_.contentWindow,
-        this.targetOrigin_);
+        this.targetOrigin_,
+        /* requireTarget */ true);
   }
 
   /** @override */

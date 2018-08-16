@@ -500,6 +500,7 @@ describes.realWin('ActivityWindowPort', {}, env => {
       it('should create messenger', () => {
         expect(messenger).to.exist;
         expect(messenger.onCommand_).to.exist;
+        expect(messenger.requireTarget_).to.be.true;
       });
 
       it('should not create messenger for redirect', () => {

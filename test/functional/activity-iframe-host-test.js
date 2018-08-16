@@ -53,6 +53,7 @@ describes.realWin('ActivityIframeHost', {}, env => {
   });
 
   it('should initialize messenger on connect', () => {
+    expect(messenger.requireTarget_).to.be.false;
     const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
     host.connect();
     expect(messenger.getTarget()).to.equal(win.parent);

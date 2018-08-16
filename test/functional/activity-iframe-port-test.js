@@ -58,6 +58,7 @@ describes.realWin('ActivityIframePort', {}, env => {
     expect(promise.then).to.be.a.function;
     expect(iframe.src).to.equal('https://example-sp.com/iframe');
     expect(messenger.onCommand_).to.be.a.function;
+    expect(messenger.requireTarget_).to.be.true;
   });
 
   it('should disconnect messenger', () => {
