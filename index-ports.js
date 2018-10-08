@@ -26,6 +26,10 @@ import {
 } from './src/activity-types';
 import {ActivityIframePort} from './src/activity-iframe-port';
 import {ActivityWindowPort} from './src/activity-window-port';
+import {
+  createAbortError,
+  isAbortError,
+} from './src/utils';
 
 module.exports = {
   ActivityPorts,
@@ -37,4 +41,6 @@ module.exports = {
   ActivityResult,
   ActivityResultCode,
   ActivityWindowPort,
+  createAbortError,
+  isAbortError,
 };

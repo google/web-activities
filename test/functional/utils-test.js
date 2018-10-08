@@ -284,6 +284,28 @@ describes.sandboxed('utils', {}, () => {
     });
   });
 
+  describe('isAbortError', () => {
+    it('should return true for an abort error', () => {
+      const e = new DOMException('cancel', 'AbortError');
+      expect(utils.isAbortError(e)).to.be.true;
+    });
+
+    it('should return false for non-errors', () => {
+      expect(utils.isAbortError(undefined)).to.be.false;
+      expect(utils.isAbortError(null)).to.be.false;
+      expect(utils.isAbortError('')).to.be.false;
+      expect(utils.isAbortError('abc')).to.be.false;
+      expect(utils.isAbortError(0)).to.be.false;
+      expect(utils.isAbortError(1)).to.be.false;
+      expect(utils.isAbortError(true)).to.be.false;
+      expect(utils.isAbortError(false)).to.be.false;
+    });
+
+    it('should return false for a unrelated error', () => {
+      expect(utils.isAbortError(new Error())).to.be.false;
+    });
+  });
+
   describe('createAbortError', () => {
     it('should create AbortError when supported', () => {
       const error = utils.createAbortError(window);

@@ -224,6 +224,18 @@ export function serializeRequest(request) {
 
 
 /**
+ * @param {*} error
+ * @return {boolean}
+ */
+export function isAbortError(error) {
+  if (!error || typeof error != 'object') {
+    return false;
+  }
+  return (error['name'] === ABORT_ERR_NAME);
+}
+
+
+/**
  * Creates or emulates a DOMException of AbortError type.
  * See https://heycam.github.io/webidl/#aborterror.
  * @param {!Window} win
