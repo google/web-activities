@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.14 */
+ /** Version: 1.15 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -305,6 +305,18 @@ function serializeRequest(request) {
     map['originVerified'] = request.originVerified;
   }
   return JSON.stringify(map);
+}
+
+
+/**
+ * @param {*} error
+ * @return {boolean}
+ */
+function isAbortError(error) {
+  if (!error || typeof error != 'object') {
+    return false;
+  }
+  return (error['name'] === ABORT_ERR_NAME);
 }
 
 
@@ -1466,7 +1478,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.14';
+    this.version = '1.15';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1638,4 +1650,6 @@ module.exports = {
   ActivityResult,
   ActivityResultCode,
   ActivityWindowPort,
+  createAbortError,
+  isAbortError,
 };

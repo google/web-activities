@@ -33,6 +33,10 @@ import {
   ActivityWindowRedirectHost,
 } from './src/activity-window-host';
 import {ActivityWindowPort} from './src/activity-window-port';
+import {
+  createAbortError,
+  isAbortError,
+} from './src/utils';
 
 module.exports = {
   ActivityHosts,
@@ -49,4 +53,6 @@ module.exports = {
   ActivityWindowPopupHost,
   ActivityWindowPort,
   ActivityWindowRedirectHost,
+  createAbortError,
+  isAbortError,
 };
