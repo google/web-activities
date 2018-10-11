@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.15 */
+ /** Version: 1.16 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -391,6 +391,14 @@ function isIeBrowser(win) {
 function isEdgeBrowser(win) {
   const nav = win.navigator;
   return /Edge/i.test(nav && nav.userAgent);
+}
+
+
+/**
+ * @param {!Error} e
+ */
+function throwAsync(e) {
+  setTimeout(() => {throw e;});
 }
 
 
@@ -1478,7 +1486,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.15';
+    this.version = '1.16';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1496,6 +1504,14 @@ class ActivityPorts {
      * @private @const {!Object<string, !ActivityPort>}
      */
     this.resultBuffer_ = {};
+
+    /** @private {?function(!Error)} */
+    this.redirectErrorResolver_ = null;
+
+    /** @private {!Promise<!Error>} */
+    this.redirectErrorPromise_ = new Promise(resolve => {
+      this.redirectErrorResolver_ = resolve;
+    });
   }
 
   /**
@@ -1593,6 +1609,13 @@ class ActivityPorts {
   }
 
   /**
+   * @param {function(!Error)} handler
+   */
+  onRedirectError(handler) {
+    this.redirectErrorPromise_.then(handler);
+  }
+
+  /**
    * @param {string} requestId
    * @return {?ActivityPort}
    * @private
@@ -1600,8 +1623,13 @@ class ActivityPorts {
   discoverResult_(requestId) {
     let port = this.resultBuffer_[requestId];
     if (!port && this.fragment_) {
-      port = discoverRedirectPort(
-          this.win_, this.fragment_, requestId);
+      try {
+        port = discoverRedirectPort(
+            this.win_, this.fragment_, requestId);
+      } catch (e) {
+        throwAsync(e);
+        this.redirectErrorResolver_(e);
+      }
       if (port) {
         this.resultBuffer_[requestId] = port;
       }

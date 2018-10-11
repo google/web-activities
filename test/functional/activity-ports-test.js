@@ -271,5 +271,53 @@ describes.realWin('ActivityPorts', {}, env => {
         expect(otherSpy).to.not.be.called;
       });
     });
+
+    it('should tolerate a broken redirect JSON', () => {
+      win.location.hash = '#__WA_RES__=broken';
+      const ports = new ActivityPorts(win);
+
+      const onResultSpy1 = sandbox.spy();
+      const onResultSpy2 = sandbox.spy();
+      ports.onResult('request1', onResultSpy1);
+      ports.onResult('request1', onResultSpy2);
+      expect(onResultSpy1).to.not.be.called;
+      expect(onResultSpy2).to.not.be.called;
+
+      const onRedirectErrorSpy = sandbox.spy();
+      ports.onRedirectError(onRedirectErrorSpy);
+
+      // Skip a microtask.
+      return Promise.resolve().then(() => {
+        expect(onResultSpy1).to.not.be.called;
+        expect(onResultSpy2).to.not.be.called;
+        expect(onRedirectErrorSpy).to.be.calledOnce;
+        expect(onRedirectErrorSpy.args[0][0]).to.be.instanceof(Error);
+        expect(onRedirectErrorSpy.args[0][0].toString()).to.match(/JSON/);
+      });
+    });
+
+    it('should tolerate a broken redirect fragment', () => {
+      win.location.hash = '#__WA_RES__=%2';
+      const ports = new ActivityPorts(win);
+
+      const onResultSpy1 = sandbox.spy();
+      const onResultSpy2 = sandbox.spy();
+      ports.onResult('request1', onResultSpy1);
+      ports.onResult('request1', onResultSpy2);
+      expect(onResultSpy1).to.not.be.called;
+      expect(onResultSpy2).to.not.be.called;
+
+      const onRedirectErrorSpy = sandbox.spy();
+      ports.onRedirectError(onRedirectErrorSpy);
+
+      // Skip a microtask.
+      return Promise.resolve().then(() => {
+        expect(onResultSpy1).to.not.be.called;
+        expect(onResultSpy2).to.not.be.called;
+        expect(onRedirectErrorSpy).to.be.calledOnce;
+        expect(onRedirectErrorSpy.args[0][0]).to.be.instanceof(Error);
+        expect(onRedirectErrorSpy.args[0][0].toString()).to.match(/URI|URL/);
+      });
+    });
   });
 });

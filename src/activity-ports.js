@@ -24,6 +24,7 @@ import {
   ActivityWindowPort,
   discoverRedirectPort,
 } from './activity-window-port';
+import {throwAsync} from './utils';
 
 
 /**
@@ -56,6 +57,14 @@ export class ActivityPorts {
      * @private @const {!Object<string, !ActivityPortDef>}
      */
     this.resultBuffer_ = {};
+
+    /** @private {?function(!Error)} */
+    this.redirectErrorResolver_ = null;
+
+    /** @private {!Promise<!Error>} */
+    this.redirectErrorPromise_ = new Promise(resolve => {
+      this.redirectErrorResolver_ = resolve;
+    });
   }
 
   /**
@@ -153,6 +162,13 @@ export class ActivityPorts {
   }
 
   /**
+   * @param {function(!Error)} handler
+   */
+  onRedirectError(handler) {
+    this.redirectErrorPromise_.then(handler);
+  }
+
+  /**
    * @param {string} requestId
    * @return {?ActivityPortDef}
    * @private
@@ -160,8 +176,13 @@ export class ActivityPorts {
   discoverResult_(requestId) {
     let port = this.resultBuffer_[requestId];
     if (!port && this.fragment_) {
-      port = discoverRedirectPort(
-          this.win_, this.fragment_, requestId);
+      try {
+        port = discoverRedirectPort(
+            this.win_, this.fragment_, requestId);
+      } catch (e) {
+        throwAsync(e);
+        this.redirectErrorResolver_(e);
+      }
       if (port) {
         this.resultBuffer_[requestId] = port;
       }
