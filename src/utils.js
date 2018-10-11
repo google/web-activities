@@ -307,3 +307,11 @@ export function isEdgeBrowser(win) {
   const nav = win.navigator;
   return /Edge/i.test(nav && nav.userAgent);
 }
+
+
+/**
+ * @param {!Error} e
+ */
+export function throwAsync(e) {
+  setTimeout(() => {throw e;});
+}
