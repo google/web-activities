@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.16 */
+ /** Version: 1.17 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1620,7 +1620,7 @@ class ActivityWindowRedirectHost {
           const fragmentRequestParam =
               getQueryParam(this.win_.location.hash, '__WA__');
           if (fragmentRequestParam) {
-            requestString = decodeURIComponent(fragmentRequestParam);
+            requestString = fragmentRequestParam;
           }
         }
         if (requestString) {
@@ -1842,7 +1842,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.16';
+    this.version = '1.17';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2547,7 +2547,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.16';
+    this.version = '1.17';
 
     /** @private @const {!Window} */
     this.win_ = win;
