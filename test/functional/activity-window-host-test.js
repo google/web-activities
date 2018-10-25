@@ -715,7 +715,7 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
       const request = {
         requestId: 'request1',
         returnUrl: 'https://example.com/opener',
-        args: {a: 1},
+        args: {a: 1, text: '40%'},
       };
       win.location.hash = '#__WA__=' +
           encodeURIComponent(serializeRequest(request));

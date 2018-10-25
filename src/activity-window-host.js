@@ -380,7 +380,7 @@ export class ActivityWindowRedirectHost {
           const fragmentRequestParam =
               getQueryParam(this.win_.location.hash, '__WA__');
           if (fragmentRequestParam) {
-            requestString = decodeURIComponent(fragmentRequestParam);
+            requestString = fragmentRequestParam;
           }
         }
         if (requestString) {
