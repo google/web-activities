@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.17 */
+ /** Version: 1.18 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1390,8 +1390,7 @@ function discoverRedirectPort(win, fragment, requestId) {
   if (!fragmentParam) {
     return null;
   }
-  const response = /** @type {?Object} */ (JSON.parse(
-      decodeURIComponent(fragmentParam)));
+  const response = /** @type {?Object} */ (JSON.parse(fragmentParam));
   if (!response || response['requestId'] != requestId) {
     return null;
   }
@@ -1486,7 +1485,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.17';
+    this.version = '1.18';
 
     /** @private @const {!Window} */
     this.win_ = win;
