@@ -765,6 +765,27 @@ describes.realWin('ActivityWindowPort', {}, env => {
       });
     });
 
+    it('should correctly decode the response', () => {
+      const port = discover({
+        requestId: 'request1',
+        code: 'ok',
+        data: {a: '%'},
+        origin: 'https://example-sp.com',
+      }, 'request1');
+      expect(port).to.exist;
+      expect(port.getMode()).to.equal(ActivityMode.REDIRECT);
+      expect(port.targetOrigin_).to.equal('https://example-sp.com');
+      return port.acceptResult().then(result => {
+        expect(result.ok).to.be.true;
+        expect(result.code).to.equal(ActivityResultCode.OK);
+        expect(result.data).to.deep.equal({a: '%'});
+        expect(result.origin).to.equal('https://example-sp.com');
+        expect(result.originVerified).to.be.false;
+        expect(result.secureChannel).to.be.false;
+        expect(replaceStateSpy).to.not.be.called;
+      });
+    });
+
     it('should try to verify the origin from referrer', () => {
       Object.defineProperty(win.document, 'referrer', {
         value: 'HTTPS://EXampLE-SP.COM/host',
