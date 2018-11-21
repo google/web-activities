@@ -449,6 +449,25 @@ describes.realWin('ActivityWindowPort', {}, env => {
             .rejectedWith(/failed to open window/);
       });
 
+      it('should not fallback to redirect if disabled', () => {
+        port = new ActivityWindowPort(
+            win,
+            'request1',
+            'https://example-sp.com/popup',
+            '_blank',
+            /* args */ null,
+            {disableRedirectFallback: true});
+        openFunc = () => {
+          throw new Error('intentional');
+        };
+        port.open();
+        expect(windowOpenStub).to.be.calledOnce;
+        expect(windowOpenStub.args[0][1]).to.equal('_blank');
+        expect(port.getTargetWin()).to.be.null;
+        return expect(port.acceptResult()).to.be.eventually
+            .rejectedWith(/failed to open window/);
+      });
+
       it('should fallback to redirect on IE', () => {
         Object.defineProperty(win.navigator, 'userAgent', {
           value: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 7.0;' +

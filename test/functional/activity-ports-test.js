@@ -133,7 +133,7 @@ describes.realWin('ActivityPorts', {}, env => {
           '_blank');
       expect(openStub).to.be.calledOnce;
       expect(port.args_).to.be.null;
-      expect(port.options_).to.be.null;
+      expect(port.options_).to.be.empty;
       expect(res.targetWin).to.equal(targetWin);
     });
 
