@@ -24,7 +24,7 @@ import {
 import {Messenger} from './messenger';
 import {
   getOriginFromUrl,
-  isConnected,
+  isNodeConnected,
   resolveResult,
 } from './utils';
 
@@ -108,7 +108,7 @@ export class ActivityIframePort {
    * @return {!Promise}
    */
   connect() {
-    if (!isConnected(this.iframe_)) {
+    if (!isNodeConnected(this.iframe_)) {
       throw new Error('iframe must be in DOM');
     }
     this.messenger_.connect(this.handleCommand_.bind(this));

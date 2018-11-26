@@ -389,8 +389,8 @@ describes.sandboxed('utils', {}, () => {
 
   describe('isConnected', () => {
     it('should use native isConnected', () => {
-      expect(utils.isConnected({isConnected: true})).to.be.true;
-      expect(utils.isConnected({isConnected: false})).to.be.false;
+      expect(utils.isNodeConnected({isConnected: true})).to.be.true;
+      expect(utils.isNodeConnected({isConnected: false})).to.be.false;
     });
 
     it('should fallback to polyfill w/o native isConnected', () => {
@@ -399,19 +399,19 @@ describes.sandboxed('utils', {}, () => {
           contains: node => node.connected_,
         },
       };
-      expect(utils.isConnected({ownerDocument: doc, connected_: true}))
+      expect(utils.isNodeConnected({ownerDocument: doc, connected_: true}))
           .to.be.true;
-      expect(utils.isConnected({ownerDocument: doc, connected_: false}))
+      expect(utils.isNodeConnected({ownerDocument: doc, connected_: false}))
           .to.be.false;
     });
 
     it('should work on actual nodes', () => {
       const node = document.createElement('div');
-      expect(utils.isConnected(node)).to.be.false;
+      expect(utils.isNodeConnected(node)).to.be.false;
       document.body.appendChild(node);
-      expect(utils.isConnected(node)).to.be.true;
+      expect(utils.isNodeConnected(node)).to.be.true;
       document.body.removeChild(node);
-      expect(utils.isConnected(node)).to.be.false;
+      expect(utils.isNodeConnected(node)).to.be.false;
     });
   });
 });

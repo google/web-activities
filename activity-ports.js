@@ -414,7 +414,7 @@ function throwAsync(e) {
  * @param {!Node} node
  * @return {boolean}
  */
-function isConnected(node) {
+function isNodeConnected(node) {
   // Ensure that node is attached if specified. This check uses a new and
   // fast `isConnected` API and thus only checked on platforms that have it.
   // See https://www.chromestatus.com/feature/5676110549352448.
@@ -916,7 +916,7 @@ class ActivityIframePort {
    * @return {!Promise}
    */
   connect() {
-    if (!isConnected(this.iframe_)) {
+    if (!isNodeConnected(this.iframe_)) {
       throw new Error('iframe must be in DOM');
     }
     this.messenger_.connect(this.handleCommand_.bind(this));
@@ -1359,16 +1359,16 @@ class ActivityWindowPort {
    */
   result_(code, data) {
     if (this.resultResolver_) {
-      const isConnected$$1 = this.messenger_.isConnected();
+      const isConnected = this.messenger_.isConnected();
       const result = new ActivityResult(
           code,
           data,
           ActivityMode.POPUP,
-          isConnected$$1 ?
+          isConnected ?
               this.messenger_.getTargetOrigin() :
               getOriginFromUrl(this.url_),
-          /* originVerified */ isConnected$$1,
-          /* secureChannel */ isConnected$$1);
+          /* originVerified */ isConnected,
+          /* secureChannel */ isConnected);
       resolveResult(this.win_, result, this.resultResolver_);
       this.resultResolver_ = null;
     }
