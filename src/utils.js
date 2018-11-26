@@ -332,5 +332,5 @@ export function isNodeConnected(node) {
   }
   // Polyfill.
   const root = node.ownerDocument && node.ownerDocument.documentElement;
-  return root && root.contains(node) || false;
+  return (root && root.contains(node)) || false;
 }
