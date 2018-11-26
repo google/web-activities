@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.19 */
+ /** Version: 1.20 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -594,6 +594,25 @@ function isEdgeBrowser(win) {
  */
 function throwAsync(e) {
   setTimeout(() => {throw e;});
+}
+
+
+/**
+ * Polyfill of the `Node.isConnected` API. See
+ * https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected.
+ * @param {!Node} node
+ * @return {boolean}
+ */
+function isNodeConnected(node) {
+  // Ensure that node is attached if specified. This check uses a new and
+  // fast `isConnected` API and thus only checked on platforms that have it.
+  // See https://www.chromestatus.com/feature/5676110549352448.
+  if ('isConnected' in node) {
+    return node['isConnected'];
+  }
+  // Polyfill.
+  const root = node.ownerDocument && node.ownerDocument.documentElement;
+  return root && root.contains(node) || false;
 }
 
 
@@ -1848,7 +1867,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.19';
+    this.version = '1.20';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1958,7 +1977,7 @@ class ActivityIframePort {
    * @return {!Promise}
    */
   connect() {
-    if (!this.win_.document.documentElement.contains(this.iframe_)) {
+    if (!isNodeConnected(this.iframe_)) {
       throw new Error('iframe must be in DOM');
     }
     this.messenger_.connect(this.handleCommand_.bind(this));
@@ -2552,7 +2571,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.19';
+    this.version = '1.20';
 
     /** @private @const {!Window} */
     this.win_ = win;

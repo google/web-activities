@@ -22,7 +22,11 @@ import {
   ActivityResultCode,
 } from './activity-types';
 import {Messenger} from './messenger';
-import {getOriginFromUrl, resolveResult} from './utils';
+import {
+  getOriginFromUrl,
+  isNodeConnected,
+  resolveResult,
+} from './utils';
 
 
 /**
@@ -104,7 +108,7 @@ export class ActivityIframePort {
    * @return {!Promise}
    */
   connect() {
-    if (!this.win_.document.documentElement.contains(this.iframe_)) {
+    if (!isNodeConnected(this.iframe_)) {
       throw new Error('iframe must be in DOM');
     }
     this.messenger_.connect(this.handleCommand_.bind(this));
