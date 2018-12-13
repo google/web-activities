@@ -98,9 +98,14 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     const redirectConnectStub =
         sandbox.stub(host.redirectHost_, 'connect',
             () => redirectConnectPromise);
+    sandbox.stub(host.redirectHost_, 'getRequestString',
+        () => 'hostRequestString');
     host.connect('{}');
     expect(redirectConnectStub).to.be.calledWith('{}');
     return redirectConnectPromise.then(() => {
+      // Skip a microtask.
+      return Promise.resolve();
+    }).then(() => {
       expect(messenger.requireTarget_).to.be.false;
       expect(messenger.getTarget()).to.equal(opener);
       expect(() => {
@@ -145,6 +150,8 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
     sandbox.stub(host.redirectHost_, 'connect',
         () => Promise.resolve());
+    sandbox.stub(host.redirectHost_, 'getRequestString',
+        () => 'hostRequestString');
     const connectPromise = host.connect('{}');
     return Promise.resolve().then(() => {
       // Skip a microtask.
@@ -196,6 +203,36 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     });
   });
 
+  it('should initialize messenger even if redirect host fails', () => {
+    sandbox.stub(host.redirectHost_, 'connect',
+        () => Promise.reject('intentional'));
+    sandbox.stub(messenger, 'sendCommand');
+    const request = {
+      requestId: 'request1',
+      returnUrl: 'https://example.com/opener',
+    };
+    const connectPromise = host.connect(request);
+    return Promise.resolve().then(() => {
+      // Skip microtask.
+      return Promise.resolve();
+    }).then(() => {
+      messenger.handleEvent_({
+        origin: 'https://example-pub.com',
+        data: {
+          sentinel: '__ACTIVITIES__',
+          cmd: 'start',
+        },
+      });
+      return connectPromise;
+    }).then(host => {
+      expect(host).to.be.instanceof(ActivityWindowPopupHost);
+      expect(messenger.getTarget()).to.equal(opener);
+      expect(messenger.getTargetOrigin()).to.equal('https://example-pub.com');
+      expect(host.isTargetOriginVerified()).to.be.true;
+      expect(host.connected_).to.be.true;
+    });
+  });
+
   it('should fallback to redirect on connect timeout', () => {
     const clock = sandbox.useFakeTimers();
     sandbox.stub(messenger, 'sendCommand');
@@ -212,6 +249,29 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       return connectPromise;
     }).then(host => {
       expect(host).to.be.instanceof(ActivityWindowRedirectHost);
+    });
+  });
+
+  it('should fail connect if popup and redirect fail', () => {
+    sandbox.stub(host.redirectHost_, 'connect',
+        () => Promise.reject('intentional'));
+    const clock = sandbox.useFakeTimers();
+    sandbox.stub(messenger, 'sendCommand');
+    const request = {
+      requestId: 'request1',
+      returnUrl: 'https://example.com/opener',
+    };
+    const connectPromise = host.connect(request);
+    return Promise.resolve().then(() => {
+      // Skip microtask.
+      return Promise.resolve();
+    }).then(() => {
+      clock.tick(6000);
+      return connectPromise;
+    }).then(() => {
+      throw new 'must have failed';
+    }, reason => {
+      expect(() => {throw reason;}).to.throw(/intentional/);
     });
   });
 
