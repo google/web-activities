@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.20 */
+ /** Version: 1.21 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -612,7 +612,7 @@ function isNodeConnected(node) {
   }
   // Polyfill.
   const root = node.ownerDocument && node.ownerDocument.documentElement;
-  return root && root.contains(node) || false;
+  return (root && root.contains(node)) || false;
 }
 
 
@@ -1333,7 +1333,7 @@ class ActivityWindowPopupHost {
     /** @private {boolean} */
     this.connected_ = false;
 
-    /** @private {?function(!ActivityHost)} */
+    /** @private {?function((!ActivityHost|!Promise))} */
     this.connectedResolver_ = null;
 
     /** @private @const {!Promise<!ActivityHost>} */
@@ -1353,6 +1353,9 @@ class ActivityWindowPopupHost {
     /** @private @const {!ActivityWindowRedirectHost} */
     this.redirectHost_ = new ActivityWindowRedirectHost(this.win_);
 
+    /** @private {?string} */
+    this.requestString_ = null;
+
     /** @private @const {!Function} */
     this.boundUnload_ = this.unload_.bind(this);
   }
@@ -1365,14 +1368,25 @@ class ActivityWindowPopupHost {
   connect(opt_request) {
     this.connected_ = false;
     this.accepted_ = false;
+    let redirectHostError;
     return this.redirectHost_.connect(opt_request).then(() => {
+      this.requestString_ = this.redirectHost_.getRequestString();
+    }, reason => {
+      // Don't throw the error immediately - give chance for the popup
+      // connection to succeed.
+      redirectHostError = reason;
+    }).then(() => {
       this.messenger_.connect(this.handleCommand_.bind(this));
       this.messenger_.sendConnectCommand();
       // Give the popup channel ~5 seconds to connect and if it can't,
       // assume that the client is offloaded and proceed with redirect.
       setTimeout(() => {
         if (this.connectedResolver_) {
-          this.connectedResolver_(this.redirectHost_);
+          if (redirectHostError) {
+            this.connectedResolver_(Promise.reject(redirectHostError));
+          } else {
+            this.connectedResolver_(this.redirectHost_);
+          }
           this.connectedResolver_ = null;
         }
       }, 5000);
@@ -1401,7 +1415,7 @@ class ActivityWindowPopupHost {
   /** @override */
   getRequestString() {
     this.ensureConnected_();
-    return this.redirectHost_.getRequestString();
+    return this.requestString_;
   }
 
   /** @override */
@@ -1867,7 +1881,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.20';
+    this.version = '1.21';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2571,7 +2585,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.20';
+    this.version = '1.21';
 
     /** @private @const {!Window} */
     this.win_ = win;
