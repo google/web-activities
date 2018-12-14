@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.20 */
+ /** Version: 1.21 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -423,7 +423,7 @@ function isNodeConnected(node) {
   }
   // Polyfill.
   const root = node.ownerDocument && node.ownerDocument.documentElement;
-  return root && root.contains(node) || false;
+  return (root && root.contains(node)) || false;
 }
 
 
@@ -1510,7 +1510,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.20';
+    this.version = '1.21';
 
     /** @private @const {!Window} */
     this.win_ = win;

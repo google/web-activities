@@ -68,7 +68,7 @@ export class ActivityWindowPopupHost {
     /** @private {boolean} */
     this.connected_ = false;
 
-    /** @private {?function(!ActivityHostDef)} */
+    /** @private {?function((!ActivityHostDef|!Promise))} */
     this.connectedResolver_ = null;
 
     /** @private @const {!Promise<!ActivityHostDef>} */
@@ -88,6 +88,9 @@ export class ActivityWindowPopupHost {
     /** @private @const {!ActivityWindowRedirectHost} */
     this.redirectHost_ = new ActivityWindowRedirectHost(this.win_);
 
+    /** @private {?string} */
+    this.requestString_ = null;
+
     /** @private @const {!Function} */
     this.boundUnload_ = this.unload_.bind(this);
   }
@@ -100,14 +103,25 @@ export class ActivityWindowPopupHost {
   connect(opt_request) {
     this.connected_ = false;
     this.accepted_ = false;
+    let redirectHostError;
     return this.redirectHost_.connect(opt_request).then(() => {
+      this.requestString_ = this.redirectHost_.getRequestString();
+    }, reason => {
+      // Don't throw the error immediately - give chance for the popup
+      // connection to succeed.
+      redirectHostError = reason;
+    }).then(() => {
       this.messenger_.connect(this.handleCommand_.bind(this));
       this.messenger_.sendConnectCommand();
       // Give the popup channel ~5 seconds to connect and if it can't,
       // assume that the client is offloaded and proceed with redirect.
       setTimeout(() => {
         if (this.connectedResolver_) {
-          this.connectedResolver_(this.redirectHost_);
+          if (redirectHostError) {
+            this.connectedResolver_(Promise.reject(redirectHostError));
+          } else {
+            this.connectedResolver_(this.redirectHost_);
+          }
           this.connectedResolver_ = null;
         }
       }, 5000);
@@ -136,7 +150,7 @@ export class ActivityWindowPopupHost {
   /** @override */
   getRequestString() {
     this.ensureConnected_();
-    return this.redirectHost_.getRequestString();
+    return this.requestString_;
   }
 
   /** @override */
