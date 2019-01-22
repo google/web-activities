@@ -23,6 +23,11 @@ const ABORT_ERR_NAME = 'AbortError';
 /** DOMException.ABORT_ERR = 20 */
 const ABORT_ERR_CODE = 20;
 
+/** Normal protocol shape is "xyz:" */
+const PROTOCOL_RE = /.*\:$/;
+
+const SCHEME_REDIRECT_BLACKLIST_RE = /javascript|script|data/i;
+
 /** @type {?HTMLAnchorElement} */
 let aResolver;
 
@@ -72,6 +77,41 @@ function getOrigin(loc) {
  */
 export function getOriginFromUrl(urlString) {
   return getOrigin(parseUrl(urlString));
+}
+
+
+/**
+ * @param {string} urlString
+ * @return {string}
+ */
+export function getSchemeFromUrl(urlString) {
+  const protocol = parseUrl(urlString).protocol;
+  return (protocol && PROTOCOL_RE.test(protocol)) ?
+      protocol.substring(0, protocol.length - 1) :
+      protocol;
+}
+
+
+/**
+ * @param {string} urlString
+ * @return {boolean}
+ */
+export function isSafeRedirectUrl(urlString) {
+  let scheme = getSchemeFromUrl(urlString);
+  scheme = scheme && scheme.toLowerCase();
+  return !SCHEME_REDIRECT_BLACKLIST_RE.test(scheme);
+}
+
+
+/**
+ * @param {string} urlString
+ * @return {string}
+ */
+export function assertSafeRedirectUrl(urlString) {
+  if (!isSafeRedirectUrl(urlString)) {
+    throw new Error('unsafe redirect url: ' + urlString);
+  }
+  return urlString;
 }
 
 

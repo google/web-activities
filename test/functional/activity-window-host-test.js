@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*eslint no-script-url: 0*/
 
 import {
   ActivityWindowPopupHost,
@@ -854,6 +855,36 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
               origin: 'https://example.com',
               originVerified: false,
             })));
+      });
+    });
+
+    it('should NOT connect with non-safe (javascript) redirect URL', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'javascript:xss()',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect('').then(() => {
+        throw new Error('must have failed');
+      }, reason => {
+        expect(() => {throw reason;}).to.throw(/unsafe/);
+      });
+    });
+
+    it('should NOT connect with non-safe (data) redirect URL', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'data:base64',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect('').then(() => {
+        throw new Error('must have failed');
+      }, reason => {
+        expect(() => {throw reason;}).to.throw(/unsafe/);
       });
     });
   });

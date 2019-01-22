@@ -14,12 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*eslint no-script-url: 0*/
 
 import {ActivityResult, ActivityResultCode} from '../../src/activity-types';
 import * as utils from '../../src/utils';
 
 
 describes.sandboxed('utils', {}, () => {
+
+  afterEach(() => {
+    utils.setParserForTesting(undefined);
+  });
 
   describe('getOriginFromUrl', () => {
     it('should return origin for absolute URL', () => {
@@ -96,6 +101,82 @@ describes.sandboxed('utils', {}, () => {
       };
       expect(utils.getWindowOrigin(legacyWin))
           .to.equal('https://example.com');
+    });
+  });
+
+  describe('getSchemeFromUrl', () => {
+    it('should extract http/https schemes', () => {
+      expect(utils.getSchemeFromUrl('http://example.org')).to.equal('http');
+      expect(utils.getSchemeFromUrl('https://example.org')).to.equal('https');
+      expect(utils.getSchemeFromUrl('HTTP://example.ORG')).to.equal('http');
+      expect(utils.getSchemeFromUrl('HTTPS://example.ORG')).to.equal('https');
+    });
+
+    it('should extract data scheme', () => {
+      expect(utils.getSchemeFromUrl('data:base64;')).to.equal('data');
+      expect(utils.getSchemeFromUrl('DATA:BASE64;')).to.equal('data');
+    });
+
+    it('should extract javascript scheme', () => {
+      expect(utils.getSchemeFromUrl('javascript:xss()')).to.equal('javascript');
+      expect(utils.getSchemeFromUrl('JAVASCRIPT:XSS()')).to.equal('javascript');
+    });
+
+    it('should extract custom scheme', () => {
+      expect(utils.getSchemeFromUrl('x-custom:abc')).to.equal('x-custom');
+      expect(utils.getSchemeFromUrl('X-CUSTOM:ABC')).to.equal('x-custom');
+    });
+
+    it('should default an empty scheme', () => {
+      expect(utils.getSchemeFromUrl('//abc')).to.equal('http');
+      expect(utils.getSchemeFromUrl('://abc')).to.equal('http');
+      expect(utils.getSchemeFromUrl('/abc')).to.equal('http');
+      expect(utils.getSchemeFromUrl('')).to.equal('http');
+    });
+  });
+
+  describe('isSafeRedirectUrl', () => {
+    it('should ok http/https', () => {
+      expect(utils.isSafeRedirectUrl('http://example.org')).to.true;
+      expect(utils.isSafeRedirectUrl('https://example.org')).to.true;
+      expect(utils.isSafeRedirectUrl('HTTP://example.ORG')).to.true;
+      expect(utils.isSafeRedirectUrl('HTTPS://example.ORG')).to.true;
+      expect(utils.assertSafeRedirectUrl('http://example.org'))
+          .to.equal('http://example.org');
+    });
+
+    it('should ok custom schemes', () => {
+      expect(utils.isSafeRedirectUrl('x-custom:abc')).to.true;
+      expect(utils.assertSafeRedirectUrl('x-custom:abc'))
+          .to.equal('x-custom:abc');
+    });
+
+    it('should fail javascript schemes', () => {
+      expect(utils.isSafeRedirectUrl('javascript:xss()')).to.false;
+      expect(utils.isSafeRedirectUrl('JAVASCRIPT:xss()')).to.false;
+      expect(utils.isSafeRedirectUrl(' javascript: xss()')).to.false;
+      expect(utils.isSafeRedirectUrl(' JAVASCRIPT: xss()')).to.false;
+      expect(utils.isSafeRedirectUrl('script:xss()')).to.false;
+      expect(utils.isSafeRedirectUrl('SCRIPT:xss()')).to.false;
+      expect(() => utils.assertSafeRedirectUrl('javascript:xss()'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertSafeRedirectUrl('JAVASCRIPT:xss()'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertSafeRedirectUrl(' javascript: xss()'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertSafeRedirectUrl(' JAVASCRIPT: xss()'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertSafeRedirectUrl('SCRIPT:xss()'))
+          .to.throw(/unsafe/);
+    });
+
+    it('should fail data schemes', () => {
+      expect(utils.isSafeRedirectUrl('data:base64')).to.false;
+      expect(utils.isSafeRedirectUrl('DATA:base64')).to.false;
+      expect(() => utils.assertSafeRedirectUrl('data:base64'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertSafeRedirectUrl('data:base64'))
+          .to.throw(/unsafe/);
     });
   });
 

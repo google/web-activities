@@ -23,6 +23,7 @@ import {
 } from './activity-types';
 import {Messenger} from './messenger';
 import {
+  assertSafeRedirectUrl,
   getOriginFromUrl,
   getQueryParam,
   getWindowOrigin,
@@ -406,7 +407,7 @@ export class ActivityWindowRedirectHost {
       }
       this.requestId_ = request.requestId;
       this.args_ = request.args;
-      this.returnUrl_ = request.returnUrl;
+      this.returnUrl_ = assertSafeRedirectUrl(request.returnUrl);
       if (request.origin) {
         // Trusted request: trust origin and verified flag explicitly.
         this.targetOrigin_ = request.origin;
