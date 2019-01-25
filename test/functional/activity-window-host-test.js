@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*eslint no-script-url: 0*/
 
 import {
   ActivityWindowPopupHost,
@@ -856,6 +857,43 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
             })));
       });
     });
+
+    it('should NOT connect with unsafe (javascript) redirect URL', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'javascript:xss()',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect('').then(() => {
+        throw new Error('must have failed');
+      }, reason => {
+        expect(() => {throw reason;}).to.throw(/unsafe/);
+      });
+    });
+
+    it('should connect with a custom-scheme redirect URL', () => {
+      const request = {
+        requestId: 'request1',
+        returnUrl: 'x-custom:action',
+        args: {a: 1},
+      };
+      win.location.hash = '#__WA__=' +
+          encodeURIComponent(serializeRequest(request));
+      return host.connect('').then(result => {
+        expect(result).to.equal(host);
+        expect(host.getTargetOrigin()).to.equal('null');
+        expect(host.isTargetOriginVerified()).to.be.false;
+        expect(host.isSecureChannel()).to.be.false;
+        expect(host.getRequestString()).to.equal(serializeRequest(
+            Object.assign(request, {
+              returnUrl: 'x-custom:action',
+              origin: 'null',
+              originVerified: false,
+            })));
+      });
+    });
   });
 
   describe('commands', () => {
@@ -1036,6 +1074,84 @@ describes.realWin('ActivityWindowRedirectHost', {}, env => {
       expect(() => {
         host.messageChannel('a');
       }).to.throw('not supported');
+    });
+  });
+
+  describe('commands with custom protocol', () => {
+    let request;
+
+    beforeEach(() => {
+      request = {
+        requestId: 'request1',
+        returnUrl: 'x-custom:action',
+        args: {a: 1},
+      };
+      return host.connect(request);
+    });
+
+    afterEach(() => {
+      host.disconnect();
+    });
+
+    function returnUrl(code, data) {
+      return 'x-custom:action#__WA_RES__=' +
+          encodeURIComponent(JSON.stringify({
+            requestId: 'request1',
+            origin: getWindowOrigin(win),
+            code,
+            data,
+          }));
+    }
+
+    it('should return connect properties', () => {
+      expect(host.getTargetOrigin()).to.equal('null');
+      expect(host.isTargetOriginVerified()).to.be.false;
+      expect(host.isSecureChannel()).to.be.false;
+      expect(host.getArgs()).to.deep.equal({a: 1});
+    });
+
+    it('should NOT allow result before accept', () => {
+      expect(() => host.result('abc'))
+          .to.throw(/not accepted/);
+    });
+
+    it('should NOT allow cancel before accept', () => {
+      expect(() => host.cancel()).to.throw(/must be http/);
+      expect(redirectStub).to.not.be.called;
+    });
+
+    it('should NOT allow failed before accept', () => {
+      expect(() => host.failed(new Error('broken'))).to.throw(/must be http/);
+      expect(redirectStub).to.not.be.called;
+    });
+
+    it('should allow "result" after accept', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.result('abc');
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(returnUrl('ok', 'abc'));
+      // Do not disconnect, wait for "close" message to ack the result receipt.
+      expect(disconnectStub).to.not.be.called;
+    });
+
+    it('should allow "canceled" after accept', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.cancel();
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(returnUrl('canceled', null));
+      expect(disconnectStub).to.not.be.called;
+    });
+
+    it('should allow "failed" after accept', () => {
+      host.accept();
+      const disconnectStub = sandbox.stub(host, 'disconnect');
+      host.failed(new Error('broken'));
+      expect(redirectStub).to.be.calledOnce;
+      expect(redirectStub).to.be.calledWith(
+          returnUrl('failed', 'Error: broken'));
+      expect(disconnectStub).to.not.be.called;
     });
   });
 });
