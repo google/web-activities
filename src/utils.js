@@ -205,7 +205,7 @@ export function assertObviousUnsafeUrl(urlString) {
   if (urlString) {
     const protocol = parseUrl(urlString).protocol;
     if (protocol.indexOf('script') != -1) {
-      throw new Error('unsafe');
+      throw new Error('unsafe "' + urlString + '"');
     }
   }
   return urlString;
