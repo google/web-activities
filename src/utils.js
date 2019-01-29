@@ -20,9 +20,6 @@ import {ActivityRequestDef} from './activity-types';
 /** Only allows http/https URLs. */
 const HTTP_S_ONLY_RE = /^https?\:/i;
 
-/** Disallow obvious unsafe (script) URLs. */
-const OBVIOUS_UNSAFE_URL_RE = /^[^:]*script[^:]*:/i;
-
 /** DOMException.ABORT_ERR name */
 const ABORT_ERR_NAME = 'AbortError';
 
@@ -205,8 +202,11 @@ export function assertAbsoluteHttpOrHttpsUrl(urlString) {
  * @return {?string}
  */
 export function assertObviousUnsafeUrl(urlString) {
-  if (OBVIOUS_UNSAFE_URL_RE.test(urlString)) {
-    throw new Error('unsafe');
+  if (urlString) {
+    const protocol = parseUrl(urlString).protocol;
+    if (protocol.indexOf('script') != -1) {
+      throw new Error('unsafe');
+    }
   }
   return urlString;
 }
