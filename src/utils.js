@@ -17,6 +17,9 @@
 
 import {ActivityRequestDef} from './activity-types';
 
+/** Only allows http/https URLs. */
+const HTTP_S_ONLY_RE = /^https?\:/i;
+
 /** DOMException.ABORT_ERR name */
 const ABORT_ERR_NAME = 'AbortError';
 
@@ -175,6 +178,36 @@ export function removeQueryParam(queryString, param) {
     }
   } while (index != -1 && index < queryString.length);
   return queryString;
+}
+
+
+/**
+ * Asserts that a given url is an absolute HTTP or HTTPS URL.
+ * @param {?string} urlString
+ * @return {?string}
+ */
+export function assertAbsoluteHttpOrHttpsUrl(urlString) {
+  if (!HTTP_S_ONLY_RE.test(urlString)) {
+    throw new Error('must be http(s)');
+  }
+  return urlString;
+}
+
+
+/**
+ * Asserts that a given url is not an obvious script URL. This is not intended
+ * as a complete verification. The complete verification is left up to the
+ * host before `accept()` method is called.
+ * @param {?string} urlString
+ * @return {?string}
+ */
+export function assertObviousUnsafeUrl(urlString) {
+  if (urlString) {
+    if (parseUrl(urlString).protocol.indexOf('script') != -1) {
+      throw new Error('unsafe "' + urlString + '"');
+    }
+  }
+  return urlString;
 }
 
 

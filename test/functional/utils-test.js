@@ -14,12 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*eslint no-script-url: 0*/
 
 import {ActivityResult, ActivityResultCode} from '../../src/activity-types';
 import * as utils from '../../src/utils';
 
 
 describes.sandboxed('utils', {}, () => {
+  afterEach(() => {
+    utils.setParserForTesting(undefined);
+  });
 
   describe('getOriginFromUrl', () => {
     it('should return origin for absolute URL', () => {
@@ -96,6 +100,71 @@ describes.sandboxed('utils', {}, () => {
       };
       expect(utils.getWindowOrigin(legacyWin))
           .to.equal('https://example.com');
+    });
+  });
+
+  describe('assertAbsoluteHttpOrHttpsUrl', () => {
+    it('should ok http/https', () => {
+      expect(utils.assertAbsoluteHttpOrHttpsUrl('http://example.org'))
+          .to.equal('http://example.org');
+      expect(utils.assertAbsoluteHttpOrHttpsUrl('https://example.org'))
+          .to.equal('https://example.org');
+    });
+
+    it('should NOT ok other schemes', () => {
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('data:base64'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('x-custom:action'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('script:xss()'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('javascript:xss()'))
+          .to.throw(/http/);
+    });
+
+    it('should NOT ok relative URLs', () => {
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('://origin/path'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('//origin/path'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('/path'))
+          .to.throw(/http/);
+      expect(() => utils.assertAbsoluteHttpOrHttpsUrl('path'))
+          .to.throw(/http/);
+    });
+  });
+
+  describe('assertObviousUnsafeUrl', () => {
+    it('should ok http/https', () => {
+      expect(utils.assertObviousUnsafeUrl('http://example.org'))
+          .to.equal('http://example.org');
+      expect(utils.assertObviousUnsafeUrl('https://example.org'))
+          .to.equal('https://example.org');
+    });
+
+    it('should NOT ok script schemes', () => {
+      expect(() => utils.assertObviousUnsafeUrl('script:xss()'))
+          .to.throw(/unsafe/);
+      expect(() => utils.assertObviousUnsafeUrl('javascript:xss()'))
+          .to.throw(/unsafe/);
+    });
+
+    it('should ok other schemes', () => {
+      expect(utils.assertObviousUnsafeUrl('data:base64'))
+          .to.equal('data:base64');
+      expect(utils.assertObviousUnsafeUrl('x-custom:action'))
+          .to.equal('x-custom:action');
+    });
+
+    it('should ok relative URLs', () => {
+      expect(utils.assertObviousUnsafeUrl('://origin/path'))
+          .to.equal('://origin/path');
+      expect(utils.assertObviousUnsafeUrl('//origin/path'))
+          .to.equal('//origin/path');
+      expect(utils.assertObviousUnsafeUrl('/path'))
+          .to.equal('/path');
+      expect(utils.assertObviousUnsafeUrl('path'))
+          .to.equal('path');
     });
   });
 

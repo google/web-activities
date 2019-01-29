@@ -23,6 +23,8 @@ import {
 } from './activity-types';
 import {Messenger} from './messenger';
 import {
+  assertAbsoluteHttpOrHttpsUrl,
+  assertObviousUnsafeUrl,
   getOriginFromUrl,
   getQueryParam,
   getWindowOrigin,
@@ -406,7 +408,10 @@ export class ActivityWindowRedirectHost {
       }
       this.requestId_ = request.requestId;
       this.args_ = request.args;
-      this.returnUrl_ = request.returnUrl;
+      // The "safe" check here is very superficial and only meant to prevent
+      // obvious unsafe URLs. The complete verification is delegated to the
+      // host as part of the `accept()` call.
+      this.returnUrl_ = assertObviousUnsafeUrl(request.returnUrl);
       if (request.origin) {
         // Trusted request: trust origin and verified flag explicitly.
         this.targetOrigin_ = request.origin;
@@ -567,9 +572,15 @@ export class ActivityWindowRedirectHost {
       'code': code,
       'data': data,
     };
+    // The return origin must be either validated/accepted or it must be
+    // strictly an http(s) URL for any "return" attempt to be made.
+    const baseReturnUrl =
+        this.accepted_ ?
+        this.returnUrl_ :
+        assertAbsoluteHttpOrHttpsUrl(this.returnUrl_);
     const returnUrl =
-        this.returnUrl_ +
-        (this.returnUrl_.indexOf('#') == -1 ? '#' : '&') +
+        baseReturnUrl +
+        (baseReturnUrl.indexOf('#') == -1 ? '#' : '&') +
         '__WA_RES__=' + encodeURIComponent(JSON.stringify(response));
     this.redirect_(returnUrl);
   }

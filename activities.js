@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.21 */
+ /** Version: 1.22 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -302,6 +302,9 @@ class ActivityHost {
 
 
 
+/** Only allows http/https URLs. */
+const HTTP_S_ONLY_RE = /^https?\:/i;
+
 /** DOMException.ABORT_ERR name */
 const ABORT_ERR_NAME = 'AbortError';
 
@@ -455,6 +458,36 @@ function removeQueryParam(queryString, param) {
     }
   } while (index != -1 && index < queryString.length);
   return queryString;
+}
+
+
+/**
+ * Asserts that a given url is an absolute HTTP or HTTPS URL.
+ * @param {?string} urlString
+ * @return {?string}
+ */
+function assertAbsoluteHttpOrHttpsUrl(urlString) {
+  if (!HTTP_S_ONLY_RE.test(urlString)) {
+    throw new Error('must be http(s)');
+  }
+  return urlString;
+}
+
+
+/**
+ * Asserts that a given url is not an obvious script URL. This is not intended
+ * as a complete verification. The complete verification is left up to the
+ * host before `accept()` method is called.
+ * @param {?string} urlString
+ * @return {?string}
+ */
+function assertObviousUnsafeUrl(urlString) {
+  if (urlString) {
+    if (parseUrl(urlString).protocol.indexOf('script') != -1) {
+      throw new Error('unsafe "' + urlString + '"');
+    }
+  }
+  return urlString;
 }
 
 
@@ -1671,7 +1704,10 @@ class ActivityWindowRedirectHost {
       }
       this.requestId_ = request.requestId;
       this.args_ = request.args;
-      this.returnUrl_ = request.returnUrl;
+      // The "safe" check here is very superficial and only meant to prevent
+      // obvious unsafe URLs. The complete verification is delegated to the
+      // host as part of the `accept()` call.
+      this.returnUrl_ = assertObviousUnsafeUrl(request.returnUrl);
       if (request.origin) {
         // Trusted request: trust origin and verified flag explicitly.
         this.targetOrigin_ = request.origin;
@@ -1832,9 +1868,15 @@ class ActivityWindowRedirectHost {
       'code': code,
       'data': data,
     };
+    // The return origin must be either validated/accepted or it must be
+    // strictly an http(s) URL for any "return" attempt to be made.
+    const baseReturnUrl =
+        this.accepted_ ?
+        this.returnUrl_ :
+        assertAbsoluteHttpOrHttpsUrl(this.returnUrl_);
     const returnUrl =
-        this.returnUrl_ +
-        (this.returnUrl_.indexOf('#') == -1 ? '#' : '&') +
+        baseReturnUrl +
+        (baseReturnUrl.indexOf('#') == -1 ? '#' : '&') +
         '__WA_RES__=' + encodeURIComponent(JSON.stringify(response));
     this.redirect_(returnUrl);
   }
@@ -1881,7 +1923,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.21';
+    this.version = '1.22';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2585,7 +2627,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.21';
+    this.version = '1.22';
 
     /** @private @const {!Window} */
     this.win_ = win;
