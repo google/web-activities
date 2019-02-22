@@ -211,27 +211,47 @@ export class ActivityWindowPopupHost {
     setTimeout(() => this.resized_(), 50);
   }
 
-  /** @override */
+  /**
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
   isMessagingSupported() {
-    return false;
+    return true;
   }
 
-  /** @override */
-  message() {
+  /**
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  message(payload) {
     this.ensureAccepted_();
-    // Not supported for compatibility with redirect mode.
+    this.messenger_.customMessage(payload);
   }
 
-  /** @override */
-  onMessage() {
+  /**
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  onMessage(callback) {
     this.ensureAccepted_();
-    // Not supported for compatibility with redirect mode.
+    this.messenger_.onCustomMessage(callback);
   }
 
-  /** @override */
+  /**
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
   messageChannel(opt_name) {
     this.ensureAccepted_();
-    throw new Error('not supported');
+    return this.messenger_.startChannel(opt_name);
   }
 
   /** @override */

@@ -17,6 +17,7 @@
 
 import {ActivityIframePort} from './activity-iframe-port';
 import {
+  ActivityMessagingPortDef,
   ActivityOpenOptionsDef,
   ActivityPortDef,
 } from './activity-types';
@@ -105,14 +106,26 @@ export class ActivityPorts {
    * @return {{targetWin: ?Window}}
    */
   open(requestId, url, target, opt_args, opt_options) {
-    const port = new ActivityWindowPort(
-        this.win_, requestId, url, target, opt_args, opt_options);
-    port.open().then(() => {
-      // Await result if possible. Notice that when falling back to "redirect",
-      // the result will never arrive through this port.
-      this.consumeResultAll_(requestId, port);
-    });
+    const port = this.openWin_(requestId, url, target, opt_args, opt_options);
     return {targetWin: port.getTargetWin()};
+  }
+
+  /**
+   * Start an activity in a separate window and tries to setup messaging with
+   * this window.
+   *
+   * See `open()` method for more details, including `onResult` callback.
+   *
+   * @param {string} requestId
+   * @param {string} url
+   * @param {string} target
+   * @param {?Object=} opt_args
+   * @param {?ActivityOpenOptionsDef=} opt_options
+   * @return {!Promise<!ActivityMessagingPortDef>}
+   */
+  openWithMessaging(requestId, url, target, opt_args, opt_options) {
+    const port = this.openWin_(requestId, url, target, opt_args, opt_options);
+    return port.whenConnected().then(() => port);
   }
 
   /**
@@ -166,6 +179,25 @@ export class ActivityPorts {
    */
   onRedirectError(handler) {
     this.redirectErrorPromise_.then(handler);
+  }
+
+  /**
+   * @param {string} requestId
+   * @param {string} url
+   * @param {string} target
+   * @param {?Object=} opt_args
+   * @param {?ActivityOpenOptionsDef=} opt_options
+   * @return {!ActivityWindowPort}
+   */
+  openWin_(requestId, url, target, opt_args, opt_options) {
+    const port = new ActivityWindowPort(
+        this.win_, requestId, url, target, opt_args, opt_options);
+    port.open().then(() => {
+      // Await result if possible. Notice that when falling back to "redirect",
+      // the result will never arrive through this port.
+      this.consumeResultAll_(requestId, port);
+    });
+    return port;
   }
 
   /**

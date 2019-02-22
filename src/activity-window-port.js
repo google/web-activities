@@ -16,6 +16,7 @@
  */
 
 import {
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
@@ -41,6 +42,7 @@ import {
  * client executed as a popup.
  *
  * @implements {ActivityPortDef}
+ * @implements {ActivityMessagingPortDef}
  */
 export class ActivityWindowPort {
 
@@ -73,6 +75,14 @@ export class ActivityWindowPort {
     this.args_ = opt_args || null;
     /** @private @const {!ActivityOpenOptionsDef} */
     this.options_ = opt_options || {};
+
+    /** @private {?function()} */
+    this.connectedResolver_ = null;
+
+    /** @private @const {!Promise} */
+    this.connectedPromise_ = new Promise(resolve => {
+      this.connectedResolver_ = resolve;
+    });
 
     /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
@@ -112,10 +122,11 @@ export class ActivityWindowPort {
   }
 
   /**
-   * @return {?Window}
+   * Waits until the activity port is connected to the host.
+   * @return {!Promise}
    */
-  getTargetWin() {
-    return this.targetWin_;
+  whenConnected() {
+    return this.connectedPromise_;
   }
 
   /**
@@ -143,8 +154,46 @@ export class ActivityWindowPort {
   }
 
   /** @override */
+  getTargetWin() {
+    return this.targetWin_;
+  }
+
+  /** @override */
   acceptResult() {
     return this.resultPromise_;
+  }
+
+  /**
+   * Sends a message to the host.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  message(payload) {
+    this.messenger_.customMessage(payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the host.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  onMessage(callback) {
+    this.messenger_.onCustomMessage(callback);
+  }
+
+  /**
+   * Creates a new communication channel or returns an existing one.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  messageChannel(opt_name) {
+    return this.messenger_.askChannel(opt_name);
   }
 
   /**
@@ -378,6 +427,7 @@ export class ActivityWindowPort {
     if (cmd == 'connect') {
       // First ever message. Indicates that the receiver is listening.
       this.messenger_.sendStartCommand(this.args_);
+      this.connectedResolver_();
     } else if (cmd == 'result') {
       // The last message. Indicates that the result has been received.
       const code = /** @type {!ActivityResultCode} */ (payload['code']);

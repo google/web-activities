@@ -19,6 +19,7 @@ import {ActivityHosts} from './src/activity-hosts';
 import {ActivityPorts} from './src/activity-ports';
 import {
   ActivityHostDef,
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
@@ -44,6 +45,7 @@ module.exports = {
   ActivityHostDef,
   ActivityIframeHost,
   ActivityIframePort,
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
