@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.22 */
+ /** Version: 1.23 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -143,6 +143,44 @@ class ActivityPort {
    * @return {!Promise<!ActivityResult>}
    */
   acceptResult() {}
+}
+
+
+/**
+ * Activity client-side binding for messaging.
+ *
+ * Whether the host can or cannot receive a message depends on the type of
+ * host and its state. Ensure that the code has an alternative path if
+ * messaging is not available.
+ *
+ * @interface
+ */
+class ActivityMessagingPort {
+
+  /**
+   * Returns the target window where host is loaded. May be unavailable.
+   * @return {?Window}
+   */
+  getTargetWin() {}
+
+  /**
+   * Sends a message to the host.
+   * @param {!Object} payload
+   */
+  message(payload) {}
+
+  /**
+   * Registers a callback to receive messages from the host.
+   * @param {function(!Object)} callback
+   */
+  onMessage(callback) {}
+
+  /**
+   * Creates a new communication channel or returns an existing one.
+   * @param {string=} opt_name
+   * @return {!Promise<!MessagePort>}
+   */
+  messageChannel(opt_name) {}
 }
 
 
@@ -843,6 +881,7 @@ function closePort(port) {
  * to size requests.
  *
  * @implements {ActivityPort}
+ * @implements {ActivityMessagingPort}
  */
 class ActivityIframePort {
 
@@ -937,27 +976,22 @@ class ActivityIframePort {
     return this.resultPromise_;
   }
 
-  /**
-   * Sends a message to the host.
-   * @param {!Object} payload
-   */
+  /** @override */
+  getTargetWin() {
+    return this.iframe_.contentWindow || null;
+  }
+
+  /** @override */
   message(payload) {
     this.messenger_.customMessage(payload);
   }
 
-  /**
-   * Registers a callback to receive messages from the host.
-   * @param {function(!Object)} callback
-   */
+  /** @override */
   onMessage(callback) {
     this.messenger_.onCustomMessage(callback);
   }
 
-  /**
-   * Creates a new communication channel or returns an existing one.
-   * @param {string=} opt_name
-   * @return {!Promise<!MessagePort>}
-   */
+  /** @override */
   messageChannel(opt_name) {
     return this.messenger_.askChannel(opt_name);
   }
@@ -1050,6 +1084,7 @@ class ActivityIframePort {
  * client executed as a popup.
  *
  * @implements {ActivityPort}
+ * @implements {ActivityMessagingPort}
  */
 class ActivityWindowPort {
 
@@ -1082,6 +1117,14 @@ class ActivityWindowPort {
     this.args_ = opt_args || null;
     /** @private @const {!ActivityOpenOptions} */
     this.options_ = opt_options || {};
+
+    /** @private {?function()} */
+    this.connectedResolver_ = null;
+
+    /** @private @const {!Promise} */
+    this.connectedPromise_ = new Promise(resolve => {
+      this.connectedResolver_ = resolve;
+    });
 
     /** @private {?function((!ActivityResult|!Promise))} */
     this.resultResolver_ = null;
@@ -1121,10 +1164,11 @@ class ActivityWindowPort {
   }
 
   /**
-   * @return {?Window}
+   * Waits until the activity port is connected to the host.
+   * @return {!Promise}
    */
-  getTargetWin() {
-    return this.targetWin_;
+  whenConnected() {
+    return this.connectedPromise_;
   }
 
   /**
@@ -1152,8 +1196,46 @@ class ActivityWindowPort {
   }
 
   /** @override */
+  getTargetWin() {
+    return this.targetWin_;
+  }
+
+  /** @override */
   acceptResult() {
     return this.resultPromise_;
+  }
+
+  /**
+   * Sends a message to the host.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  message(payload) {
+    this.messenger_.customMessage(payload);
+  }
+
+  /**
+   * Registers a callback to receive messages from the host.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  onMessage(callback) {
+    this.messenger_.onCustomMessage(callback);
+  }
+
+  /**
+   * Creates a new communication channel or returns an existing one.
+   * Whether the host can or cannot receive a message depends on the type of
+   * host and its state. Ensure that the code has an alternative path if
+   * messaging is not available.
+   * @override
+   */
+  messageChannel(opt_name) {
+    return this.messenger_.askChannel(opt_name);
   }
 
   /**
@@ -1387,6 +1469,7 @@ class ActivityWindowPort {
     if (cmd == 'connect') {
       // First ever message. Indicates that the receiver is listening.
       this.messenger_.sendStartCommand(this.args_);
+      this.connectedResolver_();
     } else if (cmd == 'result') {
       // The last message. Indicates that the result has been received.
       const code = /** @type {!ActivityResultCode} */ (payload['code']);
@@ -1510,7 +1593,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.22';
+    this.version = '1.23';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -1576,14 +1659,26 @@ class ActivityPorts {
    * @return {{targetWin: ?Window}}
    */
   open(requestId, url, target, opt_args, opt_options) {
-    const port = new ActivityWindowPort(
-        this.win_, requestId, url, target, opt_args, opt_options);
-    port.open().then(() => {
-      // Await result if possible. Notice that when falling back to "redirect",
-      // the result will never arrive through this port.
-      this.consumeResultAll_(requestId, port);
-    });
+    const port = this.openWin_(requestId, url, target, opt_args, opt_options);
     return {targetWin: port.getTargetWin()};
+  }
+
+  /**
+   * Start an activity in a separate window and tries to setup messaging with
+   * this window.
+   *
+   * See `open()` method for more details, including `onResult` callback.
+   *
+   * @param {string} requestId
+   * @param {string} url
+   * @param {string} target
+   * @param {?Object=} opt_args
+   * @param {?ActivityOpenOptions=} opt_options
+   * @return {!Promise<!ActivityMessagingPort>}
+   */
+  openWithMessaging(requestId, url, target, opt_args, opt_options) {
+    const port = this.openWin_(requestId, url, target, opt_args, opt_options);
+    return port.whenConnected().then(() => port);
   }
 
   /**
@@ -1637,6 +1732,25 @@ class ActivityPorts {
    */
   onRedirectError(handler) {
     this.redirectErrorPromise_.then(handler);
+  }
+
+  /**
+   * @param {string} requestId
+   * @param {string} url
+   * @param {string} target
+   * @param {?Object=} opt_args
+   * @param {?ActivityOpenOptions=} opt_options
+   * @return {!ActivityWindowPort}
+   */
+  openWin_(requestId, url, target, opt_args, opt_options) {
+    const port = new ActivityWindowPort(
+        this.win_, requestId, url, target, opt_args, opt_options);
+    port.open().then(() => {
+      // Await result if possible. Notice that when falling back to "redirect",
+      // the result will never arrive through this port.
+      this.consumeResultAll_(requestId, port);
+    });
+    return port;
   }
 
   /**
@@ -1695,6 +1809,7 @@ class ActivityPorts {
 module.exports = {
   ActivityPorts,
   ActivityIframePort,
+  ActivityMessagingPort,
   ActivityMode,
   ActivityOpenOptions,
   ActivityPort,
