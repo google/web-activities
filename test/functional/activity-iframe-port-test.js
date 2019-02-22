@@ -97,7 +97,10 @@ describes.realWin('ActivityIframePort', {}, env => {
       expect(port.connected_).to.be.true;
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('start', {a: 1});
-      return connectPromise;
+      return connectPromise.then(() => {
+        expect(port.getTargetWin()).to.exist;
+        expect(port.getTargetWin()).to.equal(iframe.contentWindow);
+      });
     });
 
     it('should handle successful "result"', () => {

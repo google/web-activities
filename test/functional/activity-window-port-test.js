@@ -601,10 +601,12 @@ describes.realWin('ActivityWindowPort', {}, env => {
       describe('connected', () => {
         let onCommand;
         let sendCommandStub;
+        let customMessageStub;
 
         beforeEach(() => {
           onCommand = messenger.onCommand_;
           sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+          customMessageStub = sandbox.stub(messenger, 'customMessage');
           messenger.handleEvent_({
             origin: 'https://example-sp.com',
             source: popup,
@@ -622,6 +624,10 @@ describes.realWin('ActivityWindowPort', {}, env => {
         it('should resolve target properties', () => {
           expect(port.messenger_.getTargetOrigin())
               .to.equal('https://example-sp.com');
+        });
+
+        it('should resolve connected promise', () => {
+          return port.whenConnected();
         });
 
         it('should execute heartbeat when window is open/closed', () => {
@@ -733,6 +739,39 @@ describes.realWin('ActivityWindowPort', {}, env => {
           onCommand('ready');
           onCommand('resize', {height: 111});
           expect(sendCommandStub).to.not.be.called;
+        });
+
+        it('should send custom message', () => {
+          port.message({a: 1});
+          expect(customMessageStub).to.be.calledOnce.calledWith({a: 1});
+        });
+
+        it('should receive custom message', () => {
+          const spy = sandbox.spy();
+          port.onMessage(spy);
+          messenger.handleCommand_('msg', {a: 1});
+          expect(spy).to.be.calledOnce;
+          expect(spy).to.be.calledWith({a: 1});
+        });
+
+        it('should ask the default messaging channel', () => {
+          const sidePort = {};
+          const startChannelStub = sandbox.stub(messenger, 'askChannel',
+              () => Promise.resolve(sidePort));
+          return port.messageChannel().then(res => {
+            expect(res).to.equal(sidePort);
+            expect(startChannelStub).to.be.calledOnce.calledWith(undefined);
+          });
+        });
+
+        it('should ask a named messaging channel', () => {
+          const sidePort = {};
+          const startChannelStub = sandbox.stub(messenger, 'askChannel',
+              () => Promise.resolve(sidePort));
+          return port.messageChannel('a').then(res => {
+            expect(res).to.equal(sidePort);
+            expect(startChannelStub).to.be.calledOnce.calledWith('a');
+          });
         });
       });
     });

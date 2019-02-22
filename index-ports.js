@@ -17,6 +17,7 @@
 
 import {ActivityPorts} from './src/activity-ports';
 import {
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,
@@ -34,6 +35,7 @@ import {
 module.exports = {
   ActivityPorts,
   ActivityIframePort,
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityOpenOptionsDef,
   ActivityPortDef,

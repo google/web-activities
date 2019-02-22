@@ -137,6 +137,28 @@ describes.realWin('ActivityPorts', {}, env => {
       expect(res.targetWin).to.equal(targetWin);
     });
 
+    it('should open window with messaging', () => {
+      const promise = ports.openWithMessaging(
+          'request1',
+          'https://example.com/file',
+          '_blank',
+          {a: 1},
+          {width: 300});
+      expect(openStub).to.be.calledOnce;
+      expect(port).to.exist;
+      expect(port).to.be.instanceof(ActivityWindowPort);
+      expect(port.requestId_).to.equal('request1');
+      expect(port.url_).to.equal('https://example.com/file');
+      expect(port.openTarget_).to.equal('_blank');
+      expect(port.args_).to.deep.equal({a: 1});
+      expect(port.options_).to.deep.equal({width: 300});
+      expect(port.getTargetWin()).to.equal(targetWin);
+      port.connectedResolver_();
+      return promise.then(returnedPort => {
+        expect(returnedPort).to.equal(port);
+      });
+    });
+
     it('should yield onResult registered before or after popup', () => {
       const onResultSpy = sandbox.spy();
       ports.onResult('request1', onResultSpy);

@@ -16,6 +16,7 @@
  */
 
 import {
+  ActivityMessagingPortDef,
   ActivityMode,
   ActivityPortDef,
   ActivityResult,
@@ -35,6 +36,7 @@ import {
  * to size requests.
  *
  * @implements {ActivityPortDef}
+ * @implements {ActivityMessagingPortDef}
  */
 export class ActivityIframePort {
 
@@ -129,27 +131,22 @@ export class ActivityIframePort {
     return this.resultPromise_;
   }
 
-  /**
-   * Sends a message to the host.
-   * @param {!Object} payload
-   */
+  /** @override */
+  getTargetWin() {
+    return this.iframe_.contentWindow || null;
+  }
+
+  /** @override */
   message(payload) {
     this.messenger_.customMessage(payload);
   }
 
-  /**
-   * Registers a callback to receive messages from the host.
-   * @param {function(!Object)} callback
-   */
+  /** @override */
   onMessage(callback) {
     this.messenger_.onCustomMessage(callback);
   }
 
-  /**
-   * Creates a new communication channel or returns an existing one.
-   * @param {string=} opt_name
-   * @return {!Promise<!MessagePort>}
-   */
+  /** @override */
   messageChannel(opt_name) {
     return this.messenger_.askChannel(opt_name);
   }

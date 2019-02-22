@@ -305,6 +305,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     let connectPromise;
     let onEvent;
     let sendCommandStub;
+    let customMessageStub;
     let clock;
     let request;
 
@@ -324,6 +325,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       }).then(() => {
         onEvent = messenger.handleEvent_.bind(messenger);
         sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+        customMessageStub = sandbox.stub(messenger, 'customMessage');
         onCommand('start', {a: 1});
       });
     });
@@ -509,8 +511,8 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
           /* overfow */ true);
     });
 
-    it('should NOT support messaging at all', () => {
-      expect(host.isMessagingSupported()).to.be.false;
+    it('should support messaging at all', () => {
+      expect(host.isMessagingSupported()).to.be.true;
     });
 
     it('should NOT allow messaging before accept', () => {
@@ -522,21 +524,42 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
           .to.throw(/not accepted/);
     });
 
-    it('should ignore custom message', () => {
+    it('should send custom message', () => {
       host.accept();
-      expect(() => {
-        host.message({a: 1});
-      }).to.not.throw();
-      expect(() => {
-        host.onMessage(function() {});
-      }).to.not.throw();
+      host.message({a: 1});
+      expect(customMessageStub).to.be.calledOnce;
+      expect(customMessageStub).to.be.calledWith({a: 1});
     });
 
-    it('should fail to create messaging channel', () => {
+    it('should receive custom message', () => {
       host.accept();
-      expect(() => {
-        host.messageChannel('a');
-      }).to.throw('not supported');
+      const spy = sandbox.spy();
+      host.onMessage(spy);
+      messenger.handleCommand_('msg', {a: 1});
+      expect(spy).to.be.calledOnce;
+      expect(spy).to.be.calledWith({a: 1});
+    });
+
+    it('should start custom default messaging channel', () => {
+      const port = {};
+      const startChannelStub = sandbox.stub(messenger, 'startChannel',
+          () => Promise.resolve(port));
+      host.accept();
+      return host.messageChannel().then(res => {
+        expect(res).to.equal(port);
+        expect(startChannelStub).to.be.calledOnce.calledWith(undefined);
+      });
+    });
+
+    it('should start custom named messaging channel', () => {
+      const port = {};
+      const startChannelStub = sandbox.stub(messenger, 'startChannel',
+          () => Promise.resolve(port));
+      host.accept();
+      return host.messageChannel('a').then(res => {
+        expect(res).to.equal(port);
+        expect(startChannelStub).to.be.calledOnce.calledWith('a');
+      });
     });
   });
 });

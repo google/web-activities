@@ -100,23 +100,7 @@
             HOST_URL,
             ARGS);
       }).then(function(port) {
-        port.onMessage(function(payload) {
-          printResult({
-            what: 'message',
-            payload: payload,
-          });
-          if (payload && payload.cmd == 'open_popup') {
-            var w = window.open("https://www.wikipedia.org/", '_blank', 'width=500,height=300');
-            console.log("popup: ", w);
-          }
-        });
-        port.message({from: 'client'});
-        port.messageChannel('a').then(function(channel) {
-          channel.onmessage = function(e) {
-            console.log('channel message to port: ', e);
-          };
-          channel.postMessage('from port!');
-        });
+        handleMessagingPort(port);
         port.onResizeRequest(function(height) {
           var allowed = Math.min(height, MAX_IFRAME_HEIGHT);
           iframe.style.height = allowed + 'px';
@@ -133,12 +117,14 @@
 
   function startPopup() {
     whenReady(function(activities) {
-      return activities.ports.open(
+      return activities.ports.openWithMessaging(
           'request1',
           HOST_URL,
           'popup111',
           ARGS, {
             width: 300,
+          }).then(function(port) {
+            handleMessagingPort(port);
           });
     });
   }
@@ -150,6 +136,26 @@
           HOST_URL,
           '_top',
           ARGS);
+    });
+  }
+
+  function handleMessagingPort(port) {
+    port.onMessage(function(payload) {
+      printResult({
+        what: 'message',
+        payload: payload,
+      });
+      if (payload && payload.cmd == 'open_popup') {
+        var w = window.open("https://www.wikipedia.org/", '_blank', 'width=500,height=300');
+        console.log("popup: ", w);
+      }
+    });
+    port.message({from: 'client'});
+    port.messageChannel('a').then(function(channel) {
+      channel.onmessage = function(e) {
+        console.log('channel message to port: ', e);
+      };
+      channel.postMessage('from port!');
     });
   }
 </script>
