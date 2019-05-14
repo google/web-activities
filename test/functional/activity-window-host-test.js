@@ -147,6 +147,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
   it('should handle unload', () => {
     // Before connect.
     expect(events['unload'] || []).to.have.length(0);
+    expect(events['beforeunload'] || []).to.have.length(0);
     // Connect.
     const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
     sandbox.stub(host.redirectHost_, 'connect',
@@ -169,6 +170,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
     }).then(() => {
       // Connected.
       expect(events['unload'] || []).to.have.length(1);
+      expect(events['beforeunload'] || []).to.have.length(1);
 
       // Call unload.
       events['unload'][0]();
@@ -177,6 +179,46 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
       // Disconnect.
       host.disconnect();
       expect(events['unload'] || []).to.have.length(0);
+      expect(events['beforeunload'] || []).to.have.length(0);
+    });
+  });
+
+  it('should handle beforeunload', () => {
+    // Before connect.
+    expect(events['unload'] || []).to.have.length(0);
+    expect(events['beforeunload'] || []).to.have.length(0);
+    // Connect.
+    const sendCommandStub = sandbox.stub(messenger, 'sendCommand');
+    sandbox.stub(host.redirectHost_, 'connect',
+        () => Promise.resolve());
+    sandbox.stub(host.redirectHost_, 'getRequestString',
+        () => 'hostRequestString');
+    const connectPromise = host.connect('{}');
+    return Promise.resolve().then(() => {
+      // Skip a microtask.
+      return Promise.resolve();
+    }).then(() => {
+      messenger.handleEvent_({
+        origin: 'https://example-pub.com',
+        data: {
+          sentinel: '__ACTIVITIES__',
+          cmd: 'start',
+        },
+      });
+      return connectPromise;
+    }).then(() => {
+      // Connected.
+      expect(events['unload'] || []).to.have.length(1);
+      expect(events['beforeunload'] || []).to.have.length(1);
+
+      // Call unload.
+      events['beforeunload'][0]();
+      expect(sendCommandStub).to.be.calledWith('check');
+
+      // Disconnect.
+      host.disconnect();
+      expect(events['unload'] || []).to.have.length(0);
+      expect(events['beforeunload'] || []).to.have.length(0);
     });
   });
 
@@ -379,6 +421,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
 
     it('should allow cancel before accept', () => {
       expect(events['unload'] || []).to.have.length(1);
+      expect(events['beforeunload'] || []).to.have.length(1);
       host.cancel();
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('result', {
@@ -386,10 +429,12 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         data: null,
       });
       expect(events['unload'] || []).to.have.length(0);
+      expect(events['beforeunload'] || []).to.have.length(0);
     });
 
     it('should allow failed before accept', () => {
       expect(events['unload'] || []).to.have.length(1);
+      expect(events['beforeunload'] || []).to.have.length(1);
       host.failed(new Error('intentional'));
       expect(sendCommandStub).to.be.calledOnce;
       expect(sendCommandStub).to.be.calledWith('result', {
@@ -397,11 +442,13 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         data: 'Error: intentional',
       });
       expect(events['unload'] || []).to.have.length(0);
+      expect(events['beforeunload'] || []).to.have.length(0);
     });
 
     it('should yield "result"', () => {
       host.accept();
       expect(events['unload'] || []).to.have.length(1);
+      expect(events['beforeunload'] || []).to.have.length(1);
       const disconnectStub = sandbox.stub(host, 'disconnect');
       host.result('abc');
       expect(sendCommandStub).to.be.calledOnce;
@@ -410,6 +457,7 @@ describes.realWin('ActivityWindowPopupHost', {}, env => {
         data: 'abc',
       });
       expect(events['unload'] || []).to.have.length(0);
+      expect(events['beforeunload'] || []).to.have.length(0);
       // Do not disconnect, wait for "close" message to ack the result receipt.
       expect(disconnectStub).to.not.be.called;
     });
