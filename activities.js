@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- /** Version: 1.23 */
+ /** Version: 1.24 */
 'use strict';
 
 /*eslint no-unused-vars: 0*/
@@ -1471,6 +1471,7 @@ class ActivityWindowPopupHost {
     this.accepted_ = false;
     this.messenger_.disconnect();
     this.win_.removeEventListener('unload', this.boundUnload_);
+    this.win_.removeEventListener('beforeunload', this.boundUnload_);
 
     // Try to close the window. A similar attempt will be made by the client
     // port.
@@ -1635,6 +1636,7 @@ class ActivityWindowPopupHost {
     });
     // Do not disconnect, wait for "close" message to ack the result receipt.
     this.win_.removeEventListener('unload', this.boundUnload_);
+    this.win_.removeEventListener('beforeunload', this.boundUnload_);
     // TODO(dvoytenko): Consider taking an action if result acknowledgement
     // does not arrive in some time (3-5s). For instance, we can redirect
     // back or ask the host implementer to take an action.
@@ -1652,6 +1654,7 @@ class ActivityWindowPopupHost {
       this.connected_ = true;
       this.connectedResolver_(this);
       this.win_.addEventListener('unload', this.boundUnload_);
+      this.win_.addEventListener('beforeunload', this.boundUnload_);
     } else if (cmd == 'close') {
       this.disconnect();
     }
@@ -1981,7 +1984,7 @@ class ActivityHosts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.23';
+    this.version = '1.24';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -2730,7 +2733,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.23';
+    this.version = '1.24';
 
     /** @private @const {!Window} */
     this.win_ = win;
